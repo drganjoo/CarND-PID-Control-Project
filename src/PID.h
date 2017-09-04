@@ -1,6 +1,7 @@
 #ifndef PID_H
 #define PID_H
 
+#include <ostream>
 #include <chrono>
 
 class PID {
