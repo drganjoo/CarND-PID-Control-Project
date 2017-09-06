@@ -1,10 +1,10 @@
-#ifdef _WIN32
+#ifdef MSVC
 #pragma warning(push)
 #pragma warning(disable: 4514)
 #pragma warning(disable: 4820)
 #endif
 #include "PID.h"
-#ifdef _WIN32
+#ifdef MSVC
 #pragma warning(pop)
 #endif
 

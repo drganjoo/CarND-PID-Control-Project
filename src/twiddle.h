@@ -3,6 +3,8 @@
 
 #include "PID.h"
 
+#include <string>
+
 class Twiddle
 {
 public:
@@ -10,7 +12,8 @@ public:
 		void Start();
 
 protected:
-		double Run();
+		virtual double Run() = 0;
+		virtual std::string GetFileSuffix() = 0;
 
 protected:
 		double p[3];
@@ -18,4 +21,30 @@ protected:
 		double threshold_;
 
 };
+
+class ThrottleTwiddle : public Twiddle
+{
+public:
+	explicit ThrottleTwiddle(double init_threshold) : Twiddle(init_threshold){
+	}
+
+	virtual double Run();
+	virtual std::string GetFileSuffix() {
+		return "throttle";
+	}
+};
+
+class SteeringTwiddle: public Twiddle
+{
+public:
+	explicit SteeringTwiddle(double init_threshold) : Twiddle(init_threshold) {
+	}
+
+	virtual double Run();
+	virtual std::string GetFileSuffix() {
+		return "steering";
+	}
+};
+
 #endif // !__TWIDDLE__
+
