@@ -18,7 +18,7 @@ void RunPid() {
     Simulator s;
 
     s.OnInitialize([&](uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
-        pid_steering.Init(10.025,0.00461549,-4.0861, measurement.cte);
+        pid_steering.Init(0.1, 0.00461549, -4.0861, measurement.cte);
         pid_throttle.Init(1.56807,0.00243957,-0.0972004, desired_speed - measurement.speed);
 
         log.open("data.log");

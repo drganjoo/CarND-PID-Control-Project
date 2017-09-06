@@ -5,17 +5,17 @@
 
 using namespace std;
 
-const int ITERATIONS_TO_RUN = 300;
+const int ITERATIONS_TO_RUN = 800;
 
 Twiddle::Twiddle(double init_threshold) {
 	threshold_ = init_threshold;
 
-	p[0] = 0.0;
+	p[0] = 0.1;
 	p[1] = 0.0;
 	p[2] = 0.0;
-	dp[0] = 1.0;
-	dp[1] = 1.0;
-	dp[2] = 1.0;
+	dp[0] = 0.5;
+	dp[1] = 0.5;
+	dp[2] = 0.5;
 }
 
 void Twiddle::Start()
