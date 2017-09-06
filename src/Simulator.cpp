@@ -1,104 +1,160 @@
 #include "Simulator.h"
-#include <string>
-#include "helpers.h"
 #include "json.hpp"
 
 using namespace std;
 using json = nlohmann::json;
 
-Simulator::Simulator()
-{
-	initialize_ = nullptr;
-	telemetry_ = nullptr;
+
+std::ostream& operator <<(std::ostream &os, const TelemetryMessage &m) {
+    os << m.cte << ", " << m.angle << ", " << m.speed;
+    return os;
 }
 
-Simulator::~Simulator()
+std::ostream& operator <<(std::ostream &os, const ControlInput &c) {
+    os << c.steering << ", " << c.throttle;
+    return os;
+}
+
+Simulator::Simulator()
 {
+    initialize_ = nullptr;
+    telemetry_ = nullptr;
+}
+
+
+/**
+ *
+ * @param data
+ * @param length
+ * @param tm
+ * @return 0 -> manual mode, 1 -> message passed, -1 - invalid
+ */
+int Simulator::Parse(char *data, size_t length, TelemetryMessage *tm) {
+    data[length] = 0;
+    string line = data;
+    int ret_code = -1;
+
+    if (IsValidData(line)) {
+        string jsonStr = GetJson(line);
+
+        if (jsonStr.length() == 0)
+            ret_code = 0;
+        else {
+            auto jsonObj = json::parse(jsonStr);
+            auto wsEvent = jsonObj[0].get<std::string>();
+
+            if (wsEvent == "telemetry") {
+                tm->cte = stod(jsonObj[1]["cte"].get<string>());
+                tm->speed = stod(jsonObj[1]["speed"].get<string>());
+                tm->angle = stod(jsonObj[1]["steering_angle"].get<string>());
+
+                ret_code = 1;
+            }
+        }
+    }
+
+    return ret_code;
 }
 
 void Simulator::Run()
 {
-	uWS::Hub h;
+    hub_.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+        TelemetryMessage tm;
 
-	h.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
-		initialize_(ws);
+        auto status = Parse(data, length, &tm);
+        if (0 == status)
+            SendManualMode(ws);
+        else if (status > 0) {
+            initialize_(ws, tm);
 
-		// from next time call this other lambda
-		h.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
-			data[length] = 0;
-			string line = data;
+            // from next time call this other lambda
+            hub_.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+                               TelemetryMessage tm;
+                               auto status = Parse(data, length, &tm);
+                               if (0 == status)
+                                   SendManualMode(ws);
+                               else if (status > 0)
+                                   telemetry_(ws, tm);
+                           }
+            );
+        }
+    });
 
-			if (IsValidData(line)) {
-				string jsonStr = GetJson(line);
+    hub_.onConnection([](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
+        cout << "Connected!!!" << endl;
+    });
 
-				if (jsonStr.length() == 0)
-					SendManualMode(ws);
-				else {
-					auto jsonObj = json::parse(jsonStr);
-					auto wsEvent = jsonObj[0].get<std::string>();
+    hub_.onDisconnection([](uWS::WebSocket<uWS::SERVER> ws, int code, char *message, size_t length) {
+        cout << "Disconnected" << endl;
+    });
 
-					if (wsEvent == "telemetry") {
-						TelemetryMessage measurement;
+    int port = 4567;
+    if (hub_.listen("127.0.0.1", port))
+        cout << "Listening on port " << port << endl;
+    else {
+        cerr << "Failed to listen to port" << endl;
+        exit(-1);
+    }
 
-						measurement.cte = stod(jsonObj[1]["cte"].get<string>());
-						measurement.speed = stod(jsonObj[1]["speed"].get<string>());
-						measurement.angle = stod(jsonObj[1]["steering_angle"].get<string>());
-
-
-						telemetry_(ws, measurement);
-					}
-				}
-			}
-		});
-	});
-
-	h.onConnection([](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
-		cout << "Connected!!!" << endl;
-	});
-
-	h.onDisconnection([](uWS::WebSocket<uWS::SERVER> ws, int code, char *message, size_t length) {
-		cout << "Disconnected" << endl;
-	});
-
-	int port = 4567;
-	if (h.listen("127.0.0.1", port))
-		cout << "Listening on port " << port << endl;
-	else {
-		cerr << "Failed to listen to port" << endl;
-		exit(-1);
-	}
-
-	h.run();
+    hub_.run();
 }
 
 void Simulator::SendManualMode(uWS::WebSocket<uWS::SERVER> &ws)
 {
-	std::string msg = "42[\"manual\",{}]";
-	ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+    std::string msg = "42[\"manual\",{}]";
+    ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 }
 
 void Simulator::SendReset(uWS::WebSocket<uWS::SERVER> &ws)
 {
-	std::string msg = "42[\"reset\",{}]";
-	ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+    std::string msg = "42[\"reset\",{}]";
+    ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 }
 
 bool Simulator::IsValidData(const string &line)
 {
-	return line.length() > 2 && line[0] == '4' && line[1] == '2';
+    return line.length() > 2 && line[0] == '4' && line[1] == '2';
 }
 
 std::string Simulator::GetJson(const string &line)
 {
-	if (line.find("null") != string::npos)
-		return "";
+    if (line.find("null") != string::npos)
+        return "";
 
-	auto start = line.find_first_of("[");
-	auto end = line.find_last_of("]");
+    auto start = line.find_first_of('[');
+    auto end = line.find_last_of(']');
 
-	if (start == string::npos || end == string::npos)
-		return "";
+    if (start == string::npos || end == string::npos)
+        return "";
 
-	return line.substr(start, end - start + 1);
+    return line.substr(start, end - start + 1);
+}
+
+void Simulator::SendControl(uWS::WebSocket<uWS::SERVER> &ws, const ControlInput &control) {
+    double throttle = control.throttle;
+    double steering = control.steering;
+
+    if (control.throttle > 1)
+        throttle = 1;
+    else if (throttle < -1)
+        throttle = -1;
+
+    if (steering > 1)
+        steering = 1;
+    else if (steering < -1)
+        steering = -1;
+
+    json msgJson = {
+            {"steering_angle", steering},
+            {"throttle", throttle}
+    };
+
+    auto msg = "42[\"steer\"," + msgJson.dump() + "]";
+//    cout << msg << endl;
+    ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+}
+
+void Simulator::Stop() {
+    hub_.getDefaultGroup<true>().close();
 }
 

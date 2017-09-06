@@ -1,63 +1,65 @@
+#ifdef _WIN32
 #pragma warning(push)
 #pragma warning(disable: 4514)
 #pragma warning(disable: 4820)
+#endif
 #include "PID.h"
-#include <chrono>
+#ifdef _WIN32
 #pragma warning(pop)
+#endif
 
 using namespace std;
 using namespace std::chrono;
 
 /*---------------------------------------------------------------------------------*/
-PID::PID() {
-  p_error = 0;
-  i_error = 0;
-  d_error = 0;
-  Kp = 0.0;
-  Ki = 0.0;
-  Kd = 0.0;
+PID::PID(string debug_name) {
+    Init(0, 0, 0, 0);
+    debug_name_ = debug_name;
 }
-
-PID::~PID() {}
 
 void PID::Init(double init_kp, double init_ki, double init_kd, double init_cte) {
-  this->Kp = init_kp;
-  this->Ki = init_ki;
-  this->Kd = init_kd;
-  this->last_cte_ = init_cte;
+    kp_ = init_kp;
+    ki_ = init_ki;
+    kd_ = init_kd;
+    p_error_ = init_cte;
+    i_error_ = 0;
+    d_error_ = 0;
+    total_error_ = 0;
 
-  last_time_ = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+    last_time_ = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 }
 
-void PID::UpdateError(double cte) {
-  milliseconds now  = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-  double dt = (now.count() - last_time_.count()) / 1000.0;
-  last_time_ = now;
+void PID::UpdateError(double cte, bool include_in_total /*= false */) {
+    milliseconds now  = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+    double dt = (now.count() - last_time_.count()) / 1000.0;
+    last_time_ = now;
 
-  //if (dt == 0)
+    //if (dt == 0)
     dt = 0.1;
 
-  p_error = cte;
-  d_error = (last_cte_ - cte) / dt;
-  i_error += cte * dt;
-  total_error_ += cte * cte;
+    d_error_ = (p_error_ - cte) / dt;
+    p_error_ = cte;
+    i_error_ += cte * dt;
+
+    if (include_in_total)
+        total_error_ += cte * cte;
 }
 
 double PID::TotalError() {
-  return total_error_;
+    return total_error_;
 }
 
 void PID::SetLastCte(double cte) {
-  last_cte_ = cte;
+    p_error_ = cte;
 }
 
 double PID::GetOutput() {
-  double output = -Kp * p_error - Kd * d_error - Ki * i_error;
-  
-  if (output > 1)
-	  output = 1;
-  else if (output < -1)
-	  output = -1;
+    double output = -kp_ * p_error_ - kd_ * d_error_ - ki_ * i_error_;
 
-  return output;
+    if (output > 1)
+        output = 1;
+    else if (output < -1)
+        output = -1;
+
+    return output;
 }

@@ -3,20 +3,19 @@
 
 #include "PID.h"
 
-class Twiddle 
+class Twiddle
 {
 public:
-	Twiddle(double init_threshold) {
-		threshold_ = init_threshold;
-	}
-
-	void Start();
-	double Run();
+		explicit Twiddle(double init_threshold);
+		void Start();
 
 protected:
-	double p[3];
-	double dp[3];
-	double threshold_;
+		double Run();
+
+protected:
+		double p[3];
+		double dp[3];
+		double threshold_;
 
 };
 #endif // !__TWIDDLE__

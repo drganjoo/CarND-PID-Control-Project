@@ -3,32 +3,19 @@
 
 #include <ostream>
 #include <chrono>
+#include <string>
 
 class PID {
 public:
     /*
-    * Errors
-    */
-    double p_error;
-    double i_error;
-    double d_error;
-
-    /*
-    * Coefficients
-    */
-    double Kp;
-    double Ki;
-    double Kd;
-
-    /*
     * Constructor
     */
-    PID();
+    PID(std::string debug_name);
 
     /*
     * Destructor.
     */
-    virtual ~PID();
+    ~PID() = default;
 
     /*
     * Initialize PID.
@@ -38,7 +25,7 @@ public:
     /*
     * Update the PID error variables given cross track error.
     */
-    void UpdateError(double cte);
+    void UpdateError(double cte, bool include_in_total = false);
 
     /*
     * Calculate the total PID error.
@@ -49,9 +36,15 @@ public:
     double GetOutput();
 
 private:
-    double last_cte_;
+    double p_error_;
+    double i_error_;
+    double d_error_;
+    double kp_;
+    double ki_;
+    double kd_;
     double total_error_;
     std::chrono::milliseconds last_time_;
+    std::string debug_name_;
 };
 
 #endif /* PID_H */

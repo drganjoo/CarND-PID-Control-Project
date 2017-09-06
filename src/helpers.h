@@ -8,16 +8,8 @@
 #define PID_HELPERS_H
 
 #define _USE_MATH_DEFINES
-#include <math.h>
+#include <cmath>
 #include <ostream>
-
-struct TelemetryMessage {
-	double cte;
-	double speed;
-	double angle;
-
-	friend std::ostream& operator << (std::ostream &os, const TelemetryMessage &m);
-};
 
 
 // For converting back and forth between radians and degrees.
