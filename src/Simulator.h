@@ -29,11 +29,11 @@ public:
     ~Simulator() = default;
 
     void OnInitialize(TelemetryCallbackFunc initialize_func) {
-      initialize_ = std::move(initialize_func);
+      initialize_fp = std::move(initialize_func);
     }
 
     void OnTelemetry(TelemetryCallbackFunc telemetry_func) {
-      telemetry_ = std::move(telemetry_func);
+      telemetry_fn = std::move(telemetry_func);
     }
 
     void Run();
@@ -42,13 +42,18 @@ public:
     void SendReset(uWS::WebSocket<uWS::SERVER> &ws);
     void SendControl(uWS::WebSocket<uWS::SERVER> &ws, const ControlInput &control);
 
+protected:
+    void SendResetOnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode);
+    void InitialOnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode);
+    void OnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode);
+
 private:
     int Parse(char *data, size_t length, TelemetryMessage *tm);
     bool IsValidData(const std::string &line);
     std::string GetJson(const std::string &line);
 
-    TelemetryCallbackFunc initialize_;
-    TelemetryCallbackFunc telemetry_;
+    TelemetryCallbackFunc initialize_fp;
+    TelemetryCallbackFunc telemetry_fn;
 
     uWS::Hub hub_;
 };

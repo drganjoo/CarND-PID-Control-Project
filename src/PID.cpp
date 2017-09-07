@@ -58,7 +58,7 @@ void PID::SetLastCte(double cte) {
 }
 
 double PID::GetOutput() {
-    double output = -kp_ * p_error_ - kd_ * d_error_ - ki_ * i_error_;
+    double output = -kp_ * p_error_ - ki_ * i_error_ - kd_ * d_error_ ;
 
     if (output > 1)
         output = 1;

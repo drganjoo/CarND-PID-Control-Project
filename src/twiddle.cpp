@@ -88,15 +88,20 @@ void Twiddle::Start()
         result_file.close();
 }
 
+
+CarTwiddle::CarTwiddle(double init_threshold) : Twiddle(init_threshold),
+                                             pid_throttle_("throttle"),
+                                             pid_steering_("steering")
+{
+}
+
 double CarTwiddle::Run() {
-	const double desired_speed = 30;
 	int iterations = 0;
 
 	Simulator s;
 
 	s.OnInitialize([&](uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
         SetTwiddleParams(measurement);
-        s.SendReset(ws);
 	});
 
 	s.OnTelemetry([&](uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
@@ -104,7 +109,7 @@ double CarTwiddle::Run() {
 
         iterations++;
 
-        auto speed_cte = measurement.speed - desired_speed;
+        auto speed_cte = GetSpeedCte(measurement);
 		pid_throttle_.UpdateError(speed_cte, iterations > calc_after_iterations_);
 		control.throttle = pid_throttle_.GetOutput();
 
@@ -126,7 +131,7 @@ double CarTwiddle::Run() {
 
 	s.Run();
 
-	return pid_steering_.TotalError();
+	return GetTotalError();
 }
 
 void SteeringTwiddle::SetTwiddleParams(const TelemetryMessage &measurement) {
@@ -134,7 +139,22 @@ void SteeringTwiddle::SetTwiddleParams(const TelemetryMessage &measurement) {
     pid_throttle_.Init(1.56807,0.00243957,-0.0972004, 30 - measurement.speed);
 }
 
-void ThrottleTwiddle::SetTwiddleParams(const TelemetryMessage &measurement) {
-    pid_throttle_.Init(p[0], p[1], p[2], desired_speed_ - measurement.speed);
-    pid_steering_.Init(0.1, 0, 0.003, measurement.cte);
+SteeringTwiddle::SteeringTwiddle(double init_threshold) : CarTwiddle(init_threshold) {
+    p[0] = 0.2;
+    dp[0] = 0.1;
 }
+
+void ThrottleTwiddle::SetTwiddleParams(const TelemetryMessage &measurement) {
+    pid_steering_.Init(0.1, 0, 0.003, measurement.cte);
+    pid_throttle_.Init(p[0], p[1], p[2], GetSpeedCte(measurement));
+}
+
+ThrottleTwiddle::ThrottleTwiddle(double init_threshold, double desired_speed /*= 30 */) : CarTwiddle(init_threshold) {
+    desired_speed_ = desired_speed;
+
+    p[0] = 1;
+
+    calc_after_iterations_ = 10;
+    stop_after_iterations_ = 600;
+}
+

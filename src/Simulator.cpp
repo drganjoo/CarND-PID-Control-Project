@@ -2,6 +2,7 @@
 #include "json.hpp"
 
 using namespace std;
+using namespace std::placeholders;
 using json = nlohmann::json;
 
 
@@ -17,8 +18,8 @@ std::ostream& operator <<(std::ostream &os, const ControlInput &c) {
 
 Simulator::Simulator()
 {
-    initialize_ = nullptr;
-    telemetry_ = nullptr;
+    initialize_fp = nullptr;
+    telemetry_fn = nullptr;
 }
 
 
@@ -56,36 +57,56 @@ int Simulator::Parse(char *data, size_t length, TelemetryMessage *tm) {
     return ret_code;
 }
 
+void Simulator::SendResetOnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+    hub_.onMessage(std::bind(InitialOnMessage, this, _1, _2, _3, _4));
+    SendReset(ws);
+    //SendManualMode(ws);
+}
+
+
+void Simulator::InitialOnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+    TelemetryMessage measurement;
+
+    auto status = Parse(data, length, &measurement);
+    if (0 == status)
+        SendManualMode(ws);
+    else if (status > 0) {
+        if (fabs(measurement.cte) < 1.0) {
+            initialize_fp(ws, measurement);
+
+            hub_.onMessage(std::bind(OnMessage, this, _1, _2, _3, _4));
+            SendManualMode(ws);
+        }
+        else {
+            cout << "initial cte is > 1" << endl;
+        }
+    }
+}
+
+
+
+void Simulator::OnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+    TelemetryMessage tm;
+
+    auto status = Parse(data, length, &tm);
+    if (0 == status)
+        SendManualMode(ws);
+    else if (status > 0)
+        telemetry_fn(ws, tm);
+}
+
+
 void Simulator::Run()
 {
-    hub_.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
-        TelemetryMessage tm;
+    hub_.onMessage(std::bind(SendResetOnMessage, this, _1, _2, _3, _4));
 
-        auto status = Parse(data, length, &tm);
-        if (0 == status)
-            SendManualMode(ws);
-        else if (status > 0) {
-            initialize_(ws, tm);
-
-            // from next time call this other lambda
-            hub_.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
-                               TelemetryMessage tm;
-                               auto status = Parse(data, length, &tm);
-                               if (0 == status)
-                                   SendManualMode(ws);
-                               else if (status > 0)
-                                   telemetry_(ws, tm);
-                           }
-            );
-        }
-    });
-
-    hub_.onConnection([](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
+    hub_.onConnection([this](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
         cout << "Connected!!!" << endl;
     });
 
-    hub_.onDisconnection([](uWS::WebSocket<uWS::SERVER> ws, int code, char *message, size_t length) {
+    hub_.onDisconnection([this](uWS::WebSocket<uWS::SERVER> ws, int code, char *message, size_t length) {
         cout << "Disconnected" << endl;
+        this->SendReset(ws);
     });
 
     int port = 4567;
