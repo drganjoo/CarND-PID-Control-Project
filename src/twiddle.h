@@ -8,20 +8,21 @@
 
 class Twiddle
 {
-public:
-    explicit Twiddle(double init_threshold);
-    virtual ~Twiddle() = default;
+ public:
+  explicit Twiddle(double init_threshold);
+  virtual ~Twiddle() = default;
 
-    void Start();
+  void Start();
 
-protected:
-    virtual double Run() = 0;
-    virtual std::string GetFileSuffix() = 0;
+ protected:
+  void SetBestError(unsigned int i, double error, double *best_error, std::ofstream &best_file);
+  virtual double Run() = 0;
+  virtual std::string GetFileSuffix() = 0;
 
-protected:
-    double p[3];
-    double dp[3];
-    double threshold_;
+ protected:
+  double p[3];
+  double dp[3];
+  double threshold_;
 };
 
 //class SteeringThrottleTwiddle : public Twiddle
@@ -38,59 +39,63 @@ protected:
 
 class CarTwiddle: public Twiddle
 {
-public:
-    explicit CarTwiddle(double init_threshold);
-    virtual ~CarTwiddle() = default;
+ public:
+  explicit CarTwiddle(double init_threshold);
+  virtual ~CarTwiddle() = default;
 
-    virtual void SetTwiddleParams(const TelemetryMessage &measurement) = 0;
-    virtual double GetTotalError() = 0;
-    virtual double Run() override;
+  virtual void SetTwiddleParams(const TelemetryMessage &measurement) = 0;
+  virtual double GetTotalError() = 0;
+  virtual double Run() override;
 
-protected:
-    double GetSpeedCte(const TelemetryMessage &measurement) {
-        return desired_speed_ - measurement.speed;
-    }
-protected:
+ protected:
+  double GetSpeedCte(const TelemetryMessage &measurement) {
+    return desired_speed_ - measurement.speed;
+  }
 
-    PID pid_throttle_;
-    PID pid_steering_;
+  void OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement);
 
-    double desired_speed_ = 30;
-    int calc_after_iterations_ = 300;
-    int stop_after_iterations_ = 3000;
+ protected:
+
+  Simulator sim_;
+  PID pid_throttle_;
+  PID pid_steering_;
+
+  double desired_speed_ = 30;
+  int calc_after_iterations_ = 300;
+  int stop_after_iterations_ = 3000;
 };
 
 class SteeringTwiddle : public CarTwiddle
 {
-public:
-    explicit SteeringTwiddle(double init_threshold);
+ public:
+  explicit SteeringTwiddle(double init_threshold);
 
-    virtual std::string GetFileSuffix() override{
-        return "steering";
-    }
+  virtual std::string GetFileSuffix() override{
+    return "steering";
+  }
 
-    virtual double GetTotalError() override{
-        return pid_steering_.TotalError();
-    }
+  virtual double GetTotalError() override{
+    return pid_steering_.TotalError();
+  }
 
-    virtual void SetTwiddleParams(const TelemetryMessage &measurement) override;
+  virtual void SetTwiddleParams(const TelemetryMessage &measurement) override;
 };
 
 
 class ThrottleTwiddle : public CarTwiddle
 {
-public:
-    explicit ThrottleTwiddle(double init_threshold, double desired_speed = 30);
-    virtual std::string GetFileSuffix() override{
-        return "throttle";
-    }
+ public:
+  explicit ThrottleTwiddle(double init_threshold, double desired_speed = 30);
+  virtual std::string GetFileSuffix() override{
+    return "throttle";
+  }
 
-    virtual double GetTotalError() override{
-        return pid_throttle_.TotalError();
-    }
+  virtual double GetTotalError() override{
+    return pid_throttle_.TotalError();
+  }
 
-    virtual double Run() override;
-    virtual void SetTwiddleParams(const TelemetryMessage &measurement) override;
+  virtual double Run() override;
+  virtual void SetTwiddleParams(const TelemetryMessage &measurement) override;
 };
 
 #endif // !__TWIDDLE__
