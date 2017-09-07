@@ -5,25 +5,21 @@
 
 using namespace std;
 
-const int ITERATIONS_TO_RUN = 800;
 
 Twiddle::Twiddle(double init_threshold) {
 	threshold_ = init_threshold;
 
-	p[0] = 0.1;
+	p[0] = 0.0;
 	p[1] = 0.0;
 	p[2] = 0.0;
-	dp[0] = 0.5;
-	dp[1] = 0.5;
-	dp[2] = 0.5;
+	dp[0] = 1;
+	dp[1] = 1;
+	dp[2] = 1;
 }
 
 void Twiddle::Start()
 {
 	double best_error = Run();
-
-//    char buffer[512];
-//    getcwd(buffer, sizeof(buffer));
 
     ofstream best_file, result_file;
     best_file.open("./" + GetFileSuffix() + "_best.log");
@@ -37,7 +33,7 @@ void Twiddle::Start()
     }
 
 	while (dp[0] + dp[1] + dp[2] > threshold_) {
-		for (unsigned int i = 0; i < 3; i++) {
+		for (unsigned int i = 0; i < 1; i++) {
 			// increase p value in the positive direction and see if we can get a better
 			// result with that.
 			p[i] += dp[i];
@@ -92,95 +88,53 @@ void Twiddle::Start()
         result_file.close();
 }
 
-double ThrottleTwiddle::Run()
-{
-	static bool first_time = true;
-
-	if (first_time) {
-		first_time = false;
-		return 	90000;  // difference of 30 * .1 ** 2 = 9 each time called 100 times
-	}
-
-	double desired_speed = 30;
-	int iterations = 0;
-
-	PID pid_throttle("throttle");
-	PID pid_steering("steering");
-	Simulator s;
-
-	s.OnInitialize([&](uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &tm) {
-		s.SendReset(ws);
-
-		pid_throttle.Init(p[0], p[1], p[2], desired_speed - tm.speed);
-		pid_steering.Init(0.1, 0, 0.003, tm.cte);
-	});
-
-	s.OnTelemetry([&](uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &m) {
-		ControlInput control;
-
-		auto speed_cte = m.speed - desired_speed;
-		pid_throttle.UpdateError(speed_cte, iterations++ > 100);
-		control.throttle = pid_throttle.GetOutput();
-
-		pid_steering.UpdateError(m.cte);
-		control.steering = pid_steering.GetOutput();
-
-		cout << iterations << ": Measurement --> cte:" << m.cte
-			<< ", speed: " << m.speed << ", angle: " << m.angle
-			<< " Control ->  steering: " << control.steering
-			<< " throttle: " << control.throttle
-			<< " ** P,I,D is: " << p[0] << ", " << p[1] << ", " << p[2] << endl;
-
-		s.SendControl(ws, control);
-		if (iterations > 200) {
-			s.Stop();
-		}
-	});
-
-	s.Run();
-
-	return pid_throttle.TotalError();
-}
-
-double SteeringTwiddle::Run()
-{
+double CarTwiddle::Run() {
 	const double desired_speed = 30;
 	int iterations = 0;
 
-	PID pid_throttle("throttle");
-	PID pid_steering("steering");
 	Simulator s;
 
-	s.OnInitialize([&](uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &tm) {
-		s.SendReset(ws);
-
-		pid_steering.Init(p[0], p[1], p[2], tm.cte);
-		pid_throttle.Init(1.56807,0.00243957,-0.0972004, desired_speed - tm.speed);
+	s.OnInitialize([&](uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
+        SetTwiddleParams(measurement);
+        s.SendReset(ws);
 	});
 
-	s.OnTelemetry([&](uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &m) {
-		ControlInput control;
+	s.OnTelemetry([&](uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
+        ControlInput control;
 
-		auto speed_cte = m.speed - desired_speed;
-		pid_throttle.UpdateError(speed_cte);
-		control.throttle = pid_throttle.GetOutput();
+        iterations++;
 
-		pid_steering.UpdateError(m.cte, iterations++ > ITERATIONS_TO_RUN);
-		control.steering = pid_steering.GetOutput();
+        auto speed_cte = measurement.speed - desired_speed;
+		pid_throttle_.UpdateError(speed_cte, iterations > calc_after_iterations_);
+		control.throttle = pid_throttle_.GetOutput();
 
-		cout << iterations << ": Measurement --> cte:" << m.cte
-			 << ", speed: " << m.speed << ", angle: " << m.angle
+		pid_steering_.UpdateError(measurement.cte, iterations > calc_after_iterations_);
+		control.steering = pid_steering_.GetOutput();
+
+		cout << iterations << ": Measurement --> cte:" << measurement.cte
+			 << ", speed: " << measurement.speed << ", angle: " << measurement.angle
 			 << " Control ->  steering: " << control.steering
 			 << " throttle: " << control.throttle
 			 << " ** P,I,D is: " << p[0] << ", " << p[1] << ", " << p[2] << endl;
 
 		s.SendControl(ws, control);
-		if (iterations > ITERATIONS_TO_RUN * 2) {
+
+		if (iterations > stop_after_iterations_) {
 			s.Stop();
 		}
 	});
 
 	s.Run();
 
-	return pid_steering.TotalError();
+	return pid_steering_.TotalError();
+}
+
+void SteeringTwiddle::SetTwiddleParams(const TelemetryMessage &measurement) {
+    pid_steering_.Init(p[0], p[1], p[2], measurement.cte);
+    pid_throttle_.Init(1.56807,0.00243957,-0.0972004, 30 - measurement.speed);
+}
+
+void ThrottleTwiddle::SetTwiddleParams(const TelemetryMessage &measurement) {
+    pid_throttle_.Init(p[0], p[1], p[2], desired_speed_ - measurement.speed);
+    pid_steering_.Init(0.1, 0, 0.003, measurement.cte);
 }

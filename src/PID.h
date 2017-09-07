@@ -10,6 +10,7 @@ public:
     /*
     * Constructor
     */
+    PID();
     PID(std::string debug_name);
 
     /*
@@ -25,7 +26,7 @@ public:
     /*
     * Update the PID error variables given cross track error.
     */
-    void UpdateError(double cte, bool include_in_total = false);
+    void UpdateError(double cte, bool include_in_error = false);
 
     /*
     * Calculate the total PID error.
@@ -34,6 +35,10 @@ public:
 
     void SetLastCte(double cte);
     double GetOutput();
+
+    double GetDError() {
+        return d_error_;
+    }
 
 private:
     double p_error_;

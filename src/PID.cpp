@@ -12,6 +12,10 @@ using namespace std;
 using namespace std::chrono;
 
 /*---------------------------------------------------------------------------------*/
+PID::PID() : PID("") {
+
+}
+
 PID::PID(string debug_name) {
     Init(0, 0, 0, 0);
     debug_name_ = debug_name;
@@ -29,19 +33,19 @@ void PID::Init(double init_kp, double init_ki, double init_kd, double init_cte) 
     last_time_ = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 }
 
-void PID::UpdateError(double cte, bool include_in_total /*= false */) {
-    milliseconds now  = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-    double dt = (now.count() - last_time_.count()) / 1000.0;
-    last_time_ = now;
+void PID::UpdateError(double cte, bool include_in_error /*= false */) {
+//    milliseconds now  = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+//    double dt = (now.count() - last_time_.count()) / 1000.0;
+//    last_time_ = now;
 
     //if (dt == 0)
-    dt = 0.1;
+    double dt = 0.1;
 
     d_error_ = (p_error_ - cte) / dt;
     p_error_ = cte;
     i_error_ += cte * dt;
 
-    if (include_in_total)
+    if (include_in_error)
         total_error_ += cte * cte;
 }
 
