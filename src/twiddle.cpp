@@ -4,6 +4,7 @@
 #include <fstream>
 #include <functional>
 #include <sstream>
+#include <iterator>
 
 using namespace std;
 using namespace std::placeholders;
@@ -21,76 +22,81 @@ Twiddle::Twiddle(double init_threshold) {
   best_error_ = INT_MAX;
 }
 
-void Twiddle::Start()
-{
+Twiddle::~Twiddle() {
+  if (best_file_.is_open())
+    best_file_.close();
+
+  if (result_file_.is_open())
+    result_file_.close();
+}
+
+void Twiddle::Start() {
+  OpenLogFiles();
+
   best_error_ = Run();
   PrintParams(best_error_);
 
-  best_file.open("./" + GetFileSuffix() + "_best.log");
-  if (!best_file.is_open()) {
-    cout << "Could not open best_throttle.log file. Error:" << std::strerror(errno) << endl;
-  }
-
-  result_file.open("./" + GetFileSuffix() + "_result.log");
-  if (!result_file.is_open()) {
-    cout << "Could not open best_throttle.log file. Error:" << std::strerror(errno) << endl;
-  }
-
   while (dp[0] + dp[1] + dp[2] > threshold_) {
     for (unsigned int i = 0; i < 3; i++) {
-      // increase p value in the positive direction and see if we can get a better
-      // result with that.
+      // increment in the positive direction and check results are inferior or better
       p[i] += dp[i];
 
-      double error = Run();
-      PrintParams(error);
-
-      if (result_file.is_open()) {
-        result_file << error << "," << p[0] << "," << p[1] << "," << p[2]
-                    << "," << dp[0] << "," << dp[1] << "," << dp[2] << endl;
-        result_file.flush();
-      }
-
-      if (error < best_error_) {
-        SetBestError(i, error, best_file);
-      }
-      else {
-        // Since we did not get a better result in the positive direction
-        // lets check P in the other direction (decrease it) to see if we
-        // get a better result
+      if (RunGivesInferiorResult(i)) {
+        // Go in the opposite direction
         p[i] -= 2 * dp[i];
 
-        error = Run();
-        PrintParams(error);
-
-        if (error < best_error_) {
-          SetBestError(i, error, best_file);
-        }
-        else {
-          // since neither increasing nor decreasing value of P in either direction
-          // gives us a better result, lets go back to the original P and decrease
-          // the dp value so that next time we will try some shorter range of +ve/-ve
-          // changes in P
+        if (RunGivesInferiorResult(i)) {
+          // Both inc / dec give inferior, go back and change dp to a lower value
           p[i] += dp[i];
           dp[i] *= 0.9;
         }
       }
     }
   }
-
-  if (best_file.is_open())
-    best_file.close();
-
-  if (result_file.is_open())
-    result_file.close();
 }
-void Twiddle::SetBestError(unsigned int i, double error, ofstream &best_file) {
-  best_error_ = error;
-  dp[i] *= 1.1;
 
-  if (best_file.is_open()) {
-    best_file << best_error_ << "," << p[0] << "," << p[1] << "," << p[2] << endl;
-    best_file.flush();
+bool Twiddle::RunGivesInferiorResult(unsigned int i) {
+  double error = Run();
+  PrintParams(error);
+  WriteResultToLog(error);
+
+  bool inferior = true;
+  if (error < best_error_) {
+    inferior = false;
+    SaveAndLogBestError(i, error);
+
+    // check for a bigger inc / dec next time
+    dp[i] *= 1.1;
+  }
+
+  return inferior;
+}
+
+void Twiddle::WriteResultToLog(double error){
+  if (result_file_.is_open()) {
+    result_file_ << error << "," << p[0] << "," << p[1] << "," << p[2]
+                 << "," << dp[0] << "," << dp[1] << "," << dp[2] << endl;
+  }
+}
+
+void Twiddle::OpenLogFiles() {
+  best_file_.open("./" + GetFileSuffix() + "_best.log");
+  if (!best_file_.is_open()) {
+    cout << "Could not open best_throttle.log file. Error:" << strerror(errno) << endl;
+  }
+
+  result_file_.open("./" + GetFileSuffix() + "_result.log");
+  if (!result_file_.is_open()) {
+    cout << "Could not open best_throttle.log file. Error:" << strerror(errno) << endl;
+  }
+}
+
+void Twiddle::SaveAndLogBestError(unsigned int i, double error) {
+  best_error_ = error;
+
+  if (best_file_.is_open()) {
+    best_file_ << p[0] << "," << p[1] << "," << p[2] << best_error_ << endl;
+    best_file_.flush();
   }
 }
 
@@ -103,6 +109,9 @@ void Twiddle::PrintParams(double run_error) {
        << "\tBest Error: " << best_error_ << "\trun_error: " << run_error
        << endl;
 }
+
+
+/*----------------------------------------------------------------------------------------*/
 
 CarTwiddle::CarTwiddle(double init_threshold) : Twiddle(init_threshold),
                                                 pid_throttle_("throttle"),
@@ -148,6 +157,8 @@ double CarTwiddle::Run() {
   return GetTotalError();
 }
 
+/*----------------------------------------------------------------------------------------*/
+
 void SteeringTwiddle::SetTwiddleParams(const TelemetryMessage &measurement) {
   pid_steering_.Init(p[0], p[1], p[2], measurement.cte);
   pid_throttle_.Init(1.56807,0.00243957,-0.0972004, 30 - measurement.speed);
@@ -158,6 +169,8 @@ SteeringTwiddle::SteeringTwiddle(double init_threshold) : CarTwiddle(init_thresh
   dp[0] = 0.1;
 }
 
+/*----------------------------------------------------------------------------------------*/
+
 void ThrottleTwiddle::SetTwiddleParams(const TelemetryMessage &measurement) {
   pid_steering_.Init(0.1, 0, 0.003, measurement.cte);
   pid_throttle_.Init(p[0], p[1], p[2], GetSpeedCte(measurement));
@@ -166,8 +179,14 @@ void ThrottleTwiddle::SetTwiddleParams(const TelemetryMessage &measurement) {
 ThrottleTwiddle::ThrottleTwiddle(double init_threshold, double desired_speed /*= 30 */) : CarTwiddle(init_threshold) {
   desired_speed_ = desired_speed;
 
-  p[0] = 1;
-//  dp[0] = 0.2;
+  p[0] = -0.05;
+  dp[0] = 0.01;
+
+  p[1] = 0.01;
+  dp[1] = 0.001;
+
+  p[2] = 0;
+  dp[2]  = 1;
 
   calc_after_iterations_ = 60;
   stop_after_iterations_ = 900;
@@ -176,6 +195,7 @@ ThrottleTwiddle::ThrottleTwiddle(double init_threshold, double desired_speed /*=
 double ThrottleTwiddle::Run() {
   return CarTwiddle::Run();
 }
+
 void ThrottleTwiddle::OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
   static double last_speed = measurement.speed;
   static unsigned int count_reverse = 0;

@@ -10,12 +10,12 @@ class Twiddle
 {
  public:
   explicit Twiddle(double init_threshold);
-  virtual ~Twiddle() = default;
+  virtual ~Twiddle();
 
   void Start();
 
  protected:
-  void SetBestError(unsigned int i, double error, std::ofstream &best_file);
+  void SaveAndLogBestError(unsigned int i, double error);
   virtual double Run() = 0;
   virtual std::string GetFileSuffix() = 0;
   void PrintParams(double run_error);
@@ -25,8 +25,12 @@ class Twiddle
   double dp[3];
   double threshold_;
   double best_error_;
-  std::ofstream best_file;
-  std::ofstream result_file;
+  std::ofstream best_file_;
+  std::ofstream result_file_;
+
+  void OpenLogFiles();
+  void WriteResultToLog(double error);
+  bool RunGivesInferiorResult(unsigned int i);
 };
 
 //class SteeringThrottleTwiddle : public Twiddle
@@ -65,8 +69,8 @@ class CarTwiddle: public Twiddle
   PID pid_steering_;
 
   double desired_speed_ = 30;
-  int calc_after_iterations_ = 300;
-  int stop_after_iterations_ = 3000;
+  unsigned int calc_after_iterations_ = 300;
+  unsigned int stop_after_iterations_ = 3000;
   unsigned int iterations = 0;
 };
 

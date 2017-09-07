@@ -4,7 +4,6 @@ project(PID)
 #set(CMAKE_CXX_STANDARD 17)
 add_definitions(-std=c++11)
 
-
 set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS "${CXX_FLAGS}")
 set(sources src/PID.cpp src/main.cpp src/Simulator.cpp src/twiddle.cpp src/helpers.cpp src/PIDSimControl.cpp src/PIDSimControl.h)
@@ -24,10 +23,10 @@ if (WIN32)
     link_directories(c:/msys64/usr/local/lib)
 endif()
 
-add_executable(pid ${sources})
+add_executable(PID ${sources})
 
-target_link_libraries(pid ssl uv uWS z)
+target_link_libraries(PID ssl uv uWS z)
 
 if (WIN32)
-    target_link_libraries(pid, ws2_32)
+    target_link_libraries(PID ws2_32)
 endif()
