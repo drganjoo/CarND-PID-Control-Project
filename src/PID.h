@@ -40,6 +40,14 @@ public:
         return d_error_;
     }
 
+    double GetKp() {
+        return kp_;
+    }
+
+    double GetKi() {
+        return ki_;
+    }
+
 private:
     double p_error_;
     double i_error_;

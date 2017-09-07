@@ -152,9 +152,18 @@ void ThrottleTwiddle::SetTwiddleParams(const TelemetryMessage &measurement) {
 ThrottleTwiddle::ThrottleTwiddle(double init_threshold, double desired_speed /*= 30 */) : CarTwiddle(init_threshold) {
     desired_speed_ = desired_speed;
 
-    p[0] = 1;
+    p[0] = -0.1;
+    p[1] = -0.1;
+    dp[0] = 0.1;
+    dp[1] = 0.1;
 
     calc_after_iterations_ = 10;
-    stop_after_iterations_ = 600;
+    stop_after_iterations_ = 900;
 }
 
+double ThrottleTwiddle::Run() {
+    if (pid_throttle_.GetKp() > 0 || pid_throttle_.GetKi() > 0)
+        return INT_MAX;
+
+    return CarTwiddle::Run();
+}

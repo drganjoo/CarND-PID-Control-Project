@@ -17,7 +17,7 @@ void RunSteeringTwiddle() {
 }
 
 void RunThrottleTwiddle() {
-    ThrottleTwiddle t(0.002);
+    ThrottleTwiddle t(0.002, 20.0);
     t.Start();
 }
 
@@ -33,7 +33,7 @@ void ThrottleTest(){
 
     s.OnInitialize([&](uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
         //pid_throttle.Init(-0.1, -0.0054, 0, desired_speed - measurement.speed);
-        pid_throttle.Init(-0.1, -0.0054, 0, desired_speed - measurement.speed);
+        pid_throttle.Init(-0.1, -0.003, 0, desired_speed - measurement.speed);
         pid_steering.Init(0.08, 0, 0, measurement.cte);
     });
 
@@ -68,6 +68,6 @@ int main()
 {
     //RunPid();
     //RunSteeringTwiddle();
-
-    ThrottleTest();
+    RunThrottleTwiddle();
+    //ThrottleTest();
 }

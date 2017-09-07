@@ -89,6 +89,7 @@ public:
         return pid_throttle_.TotalError();
     }
 
+    virtual double Run() override;
     virtual void SetTwiddleParams(const TelemetryMessage &measurement) override;
 };
 
