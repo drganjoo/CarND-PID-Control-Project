@@ -33,7 +33,7 @@ void Twiddle::Start()
     }
 
 	while (dp[0] + dp[1] + dp[2] > threshold_) {
-		for (unsigned int i = 0; i < 1; i++) {
+		for (unsigned int i = 0; i < 3; i++) {
 			// increase p value in the positive direction and see if we can get a better
 			// result with that.
 			p[i] += dp[i];
@@ -56,7 +56,9 @@ void Twiddle::Start()
                     best_file << best_error << "," << p[0] << "," << p[1] << "," << p[2] << endl;
                     best_file.flush();
                 }
-			}
+
+                cout << "Best Error: " << best_error << " ** P,I,D is: " << p[0] << ", " << p[1] << ", " << p[2] << endl;
+            }
 			else {
 				// Since we did not get a better result in the positive direction
 				// lets check P in the other direction (decrease it) to see if we 
@@ -67,7 +69,14 @@ void Twiddle::Start()
 
 				if (error < best_error) {
 					best_error = error;
-					p[i] *= 1.1;
+					dp[i] *= 1.1;
+
+                    if (best_file.is_open()) {
+                        best_file << best_error << "," << p[0] << "," << p[1] << "," << p[2] << endl;
+                        best_file.flush();
+                    }
+
+                    cout << "Best Error: " << best_error << " ** P,I,D is: " << p[0] << ", " << p[1] << ", " << p[2] << endl;
 				}
 				else {
 					// since neither increasing nor decreasing value of P in either direction
@@ -116,11 +125,11 @@ double CarTwiddle::Run() {
 		pid_steering_.UpdateError(measurement.cte, iterations > calc_after_iterations_);
 		control.steering = pid_steering_.GetOutput();
 
-		cout << iterations << ": Measurement --> cte:" << measurement.cte
-			 << ", speed: " << measurement.speed << ", angle: " << measurement.angle
-			 << " Control ->  steering: " << control.steering
-			 << " throttle: " << control.throttle
-			 << " ** P,I,D is: " << p[0] << ", " << p[1] << ", " << p[2] << endl;
+//		cout << iterations << ": Measurement --> cte:" << measurement.cte
+//			 << ", speed: " << measurement.speed << ", angle: " << measurement.angle
+//			 << " Control ->  steering: " << control.steering
+//			 << " throttle: " << control.throttle
+//			 << " ** P,I,D is: " << p[0] << ", " << p[1] << ", " << p[2] << endl;
 
 		s.SendControl(ws, control);
 

@@ -17,7 +17,7 @@ void RunSteeringTwiddle() {
 }
 
 void RunThrottleTwiddle() {
-    ThrottleTwiddle t(0.002, 20.0);
+    ThrottleTwiddle t(0.00002, 20.0);
     t.Start();
 }
 
