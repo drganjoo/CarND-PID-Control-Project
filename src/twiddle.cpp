@@ -33,7 +33,10 @@ Twiddle::~Twiddle() {
 void Twiddle::Start() {
   OpenLogFiles();
 
-  best_error_ = Run();
+  for (int i = 0; i < 5; i++) {
+    best_error_ = Run();
+    cout << "Run # " << i << ": P=" << p[0] << ", " << p[1] << ", " << p[2] << "\t Error: " << best_error_ << endl;
+  }
 
   while (dp[0] + dp[1] + dp[2] > threshold_) {
     for (unsigned int i = 0; i < 3; i++) {
@@ -179,10 +182,10 @@ ThrottleTwiddle::ThrottleTwiddle(double init_threshold, double desired_speed /*=
   desired_speed_ = desired_speed;
 
   p[0] = -0.05;
-  dp[0] = 0.01;
+  dp[0] = 0.04;
 
-  p[1] = -0.01;
-  dp[1] = 0.001;
+  p[1] = -0.005;
+  dp[1] = 0.004;
 
   p[2] = 0;
   dp[2]  = 1;

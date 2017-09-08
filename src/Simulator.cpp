@@ -1,10 +1,11 @@
 #include "Simulator.h"
 #include "json.hpp"
+#include <chrono>
 
 using namespace std;
 using namespace std::placeholders;
+using namespace std::chrono;
 using json = nlohmann::json;
-
 
 std::ostream& operator <<(std::ostream &os, const TelemetryMessage &m) {
   os << m.cte << ", " << m.angle << ", " << m.speed;
@@ -25,13 +26,6 @@ Simulator::Simulator()
 }
 
 
-/**
- *
- * @param data
- * @param length
- * @param measurement
- * @return 0 -> manual mode, 1 -> message passed, -1 - invalid
- */
 int Simulator::Parse(char *data, size_t length, TelemetryMessage *measurement) {
   data[length] = 0;
   string line = data;
@@ -57,6 +51,10 @@ int Simulator::Parse(char *data, size_t length, TelemetryMessage *measurement) {
         //measurement->throttle = stod(jsonObj[1]["throttle"].get<string>());
         measurement->throttle = last_control_.throttle;
 
+        milliseconds now  = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        measurement->dt_ms = now.count() - last_call_.count();
+        last_call_ = now;
+
         ret_code = 1;
       }
     }
@@ -68,7 +66,11 @@ int Simulator::Parse(char *data, size_t length, TelemetryMessage *measurement) {
 void Simulator::SendResetOnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
   hub_.onMessage(std::bind(&Simulator::InitialOnMessage, this, _1, _2, _3, _4));
   SendReset(ws);
-  //SendManualMode(ws);
+
+  last_control_.steering = 0;
+  last_control_.throttle = 0;
+  settle_down_iterations_ = 0;
+  last_call_ = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 }
 
 
@@ -76,19 +78,17 @@ void Simulator::InitialOnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, siz
   TelemetryMessage measurement;
 
   auto status = Parse(data, length, &measurement);
-  if (0 == status)
-    SendManualMode(ws);
-  else if (status > 0) {
-    if ((fabs(measurement.cte) < 1.0) && (measurement.speed < 1)) {
+  if (status > 0) {
+    if ((fabs(measurement.cte) < 1.0) && (measurement.speed < 1) && settle_down_iterations_++ > 100) {
+
       initialize_fp(ws, measurement);
 
+      // don't call us next time, call the telemetry handler function
       hub_.onMessage(std::bind(&Simulator::OnMessage, this, _1, _2, _3, _4));
-      SendManualMode(ws);
-    }
-    else {
-      //cout << "initial cte is > 1" << endl;
     }
   }
+
+  SendManualMode(ws);
 }
 
 

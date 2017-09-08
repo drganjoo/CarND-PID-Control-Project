@@ -4,12 +4,14 @@
 #include <iostream>
 #include <string>
 #include "helpers.h"
+#include <chrono>
 
 struct TelemetryMessage {
   double cte;
   double speed;
   double angle;
   double throttle;
+  double dt_ms;
 
   friend std::ostream& operator << (std::ostream &os, const TelemetryMessage &m);
 };
@@ -58,4 +60,6 @@ class Simulator
 
   uWS::Hub hub_;
   ControlInput last_control_;
+  unsigned int settle_down_iterations_ = 0;
+  std::chrono::milliseconds last_call_;
 };
