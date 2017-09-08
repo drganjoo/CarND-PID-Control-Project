@@ -34,7 +34,6 @@ void Twiddle::Start() {
   OpenLogFiles();
 
   best_error_ = Run();
-  PrintParams(best_error_);
 
   while (dp[0] + dp[1] + dp[2] > threshold_) {
     for (unsigned int i = 0; i < 3; i++) {
@@ -74,8 +73,8 @@ bool Twiddle::RunGivesInferiorResult(unsigned int i) {
 
 void Twiddle::WriteResultToLog(double error){
   if (result_file_.is_open()) {
-    result_file_ << error << "," << p[0] << "," << p[1] << "," << p[2]
-                 << "," << dp[0] << "," << dp[1] << "," << dp[2] << endl;
+    result_file_ << p[0] << "," << p[1] << "," << p[2]
+                 << "," << dp[0] << "," << dp[1] << "," << dp[2] << error << endl;
   }
 }
 
@@ -105,7 +104,7 @@ void Twiddle::PrintParams(double run_error) {
   copy(p, p + 3, ostream_iterator<double>(p_ss, ","));
   copy(dp, dp + 3, ostream_iterator<double>(dp_ss, ","));
 
-  cout << "Twidle Run For\tP = " << p_ss.str() << "\tDP = " << dp_ss.str()
+  cout << "Twidle Ran For\tP = " << p_ss.str() << "\tDP = " << dp_ss.str()
        << "\tBest Error: " << best_error_ << "\trun_error: " << run_error
        << endl;
 }

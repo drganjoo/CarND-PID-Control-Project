@@ -106,19 +106,29 @@ void Simulator::OnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, size_t len
 
 void Simulator::Run()
 {
+  static unsigned char msg_shown = 0x0;
+
   hub_.onMessage(std::bind(&Simulator::SendResetOnMessage, this, _1, _2, _3, _4));
 
   hub_.onConnection([this](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
-//        cout << "Connected!!!" << endl;
+    if (!(msg_shown & 0x1)) {
+      cout << "Connected!!!" << endl;
+      msg_shown |= 0x1;
+    }
   });
 
   hub_.onDisconnection([this](uWS::WebSocket<uWS::SERVER> ws, int code, char *message, size_t length) {
-//        cout << "Disconnected" << endl;
-    this->SendReset(ws);
+    //cout << "Disconnected" << endl;
   });
 
   int port = 4567;
-  if (!hub_.listen("127.0.0.1", port)) {
+  if (hub_.listen("127.0.0.1", port)) {
+    if (!(msg_shown & 0x2)) {
+      cout << "Listening on port " << port << endl;
+      msg_shown |= 0x2;
+    }
+  }
+  else {
     cerr << "Failed to listen to port" << endl;
     exit(-1);
   }
