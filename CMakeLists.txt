@@ -25,4 +25,9 @@ if (WIN32)
 endif()
 
 add_executable(pid ${sources})
-target_link_libraries(pid ssl libuv libuWS.dll ws2_32 z)
+
+target_link_libraries(pid ssl uv uWS z)
+
+if (WIN32)
+    target_link_libraries(pid, ws2_32)
+endif()

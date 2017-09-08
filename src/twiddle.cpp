@@ -3,6 +3,7 @@
 #include "Simulator.h"
 #include <fstream>
 #include <functional>
+#include <sstream>
 
 using namespace std;
 using namespace std::placeholders;
@@ -17,13 +18,14 @@ Twiddle::Twiddle(double init_threshold) {
   dp[0] = 1;
   dp[1] = 1;
   dp[2] = 1;
+  best_error_ = INT_MAX;
 }
 
 void Twiddle::Start()
 {
-  double best_error = Run();
+  best_error_ = Run();
+  PrintParams(best_error_);
 
-  ofstream best_file, result_file;
   best_file.open("./" + GetFileSuffix() + "_best.log");
   if (!best_file.is_open()) {
     cout << "Could not open best_throttle.log file. Error:" << std::strerror(errno) << endl;
@@ -40,9 +42,8 @@ void Twiddle::Start()
       // result with that.
       p[i] += dp[i];
 
-      cout << "Using p[0]: " << p[0] << endl;
-
       double error = Run();
+      PrintParams(error);
 
       if (result_file.is_open()) {
         result_file << error << "," << p[0] << "," << p[1] << "," << p[2]
@@ -50,8 +51,8 @@ void Twiddle::Start()
         result_file.flush();
       }
 
-      if (error < best_error) {
-        SetBestError(i, error, &best_error, best_file);
+      if (error < best_error_) {
+        SetBestError(i, error, best_file);
       }
       else {
         // Since we did not get a better result in the positive direction
@@ -60,9 +61,10 @@ void Twiddle::Start()
         p[i] -= 2 * dp[i];
 
         error = Run();
+        PrintParams(error);
 
-        if (error < best_error) {
-          SetBestError(i, error, &best_error, best_file);
+        if (error < best_error_) {
+          SetBestError(i, error, best_file);
         }
         else {
           // since neither increasing nor decreasing value of P in either direction
@@ -82,16 +84,24 @@ void Twiddle::Start()
   if (result_file.is_open())
     result_file.close();
 }
-void Twiddle::SetBestError(unsigned int i, double error, double *best_error, ofstream &best_file) {
-  *best_error = error;
+void Twiddle::SetBestError(unsigned int i, double error, ofstream &best_file) {
+  best_error_ = error;
   dp[i] *= 1.1;
 
   if (best_file.is_open()) {
-    best_file << best_error << "," << p[0] << "," << p[1] << "," << p[2] << endl;
+    best_file << best_error_ << "," << p[0] << "," << p[1] << "," << p[2] << endl;
     best_file.flush();
   }
+}
 
-  cout << "Best Error: " << best_error << " ** P,I,D is: " << p[0] << ", " << p[1] << ", " << p[2] << endl;
+void Twiddle::PrintParams(double run_error) {
+  ostringstream p_ss, dp_ss;
+  copy(p, p + 3, ostream_iterator<double>(p_ss, ","));
+  copy(dp, dp + 3, ostream_iterator<double>(dp_ss, ","));
+
+  cout << "Twidle Run For\tP = " << p_ss.str() << "\tDP = " << dp_ss.str()
+       << "\tBest Error: " << best_error_ << "\trun_error: " << run_error
+       << endl;
 }
 
 CarTwiddle::CarTwiddle(double init_threshold) : Twiddle(init_threshold),
@@ -101,7 +111,6 @@ CarTwiddle::CarTwiddle(double init_threshold) : Twiddle(init_threshold),
 }
 
 void CarTwiddle::OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
-  static unsigned int iterations = 0;
   ControlInput control;
 
   iterations++;
@@ -129,6 +138,7 @@ void CarTwiddle::OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMes
 double CarTwiddle::Run() {
   sim_.OnInitialize([&](uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
     SetTwiddleParams(measurement);
+    iterations = 0;
   });
 
   sim_.OnTelemetry(std::bind(&CarTwiddle::OnTelemetry, this, _1, _2));
@@ -156,18 +166,42 @@ void ThrottleTwiddle::SetTwiddleParams(const TelemetryMessage &measurement) {
 ThrottleTwiddle::ThrottleTwiddle(double init_threshold, double desired_speed /*= 30 */) : CarTwiddle(init_threshold) {
   desired_speed_ = desired_speed;
 
-  p[0] = -0.1;
-  p[1] = -0.1;
-  dp[0] = 0.1;
-  dp[1] = 0.1;
+  p[0] = 1;
+//  dp[0] = 0.2;
 
-  calc_after_iterations_ = 10;
+  calc_after_iterations_ = 60;
   stop_after_iterations_ = 900;
 }
 
 double ThrottleTwiddle::Run() {
-  if (pid_throttle_.GetKp() > 0 || pid_throttle_.GetKi() > 0)
-    return INT_MAX;
-
   return CarTwiddle::Run();
+}
+void ThrottleTwiddle::OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
+  static double last_speed = measurement.speed;
+  static unsigned int count_reverse = 0;
+
+  if (measurement.throttle < 0) {
+    double d_speed = measurement.speed - last_speed;
+    last_speed = measurement.speed;
+
+    if (d_speed >= 0) {
+      // hmmm is the car going in reverse now since the throttle is -ve
+      // but speed is increasing. Lets see for the next few seconds to make sure this
+      // happens
+      count_reverse++;
+
+      if (count_reverse >= 30) {
+        // for sure it is going in reverse, lets stop and return a big number from total error
+        pid_throttle_.UpdateError(INT_MAX, true);
+        sim_.Stop();
+      }
+    }
+    else {
+      count_reverse = 0;
+    }
+  } else {
+    count_reverse = 0;
+  }
+
+  CarTwiddle::OnTelemetry(ws, measurement);
 }

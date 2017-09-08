@@ -41,7 +41,7 @@ void PID::UpdateError(double cte, bool include_in_error /*= false */) {
     //if (dt == 0)
     double dt = 0.1;
 
-    d_error_ = (p_error_ - cte) / dt;
+    d_error_ = (cte - p_error_) / dt;
     p_error_ = cte;
     i_error_ += cte * dt;
 

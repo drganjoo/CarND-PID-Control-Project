@@ -3,8 +3,8 @@
 
 #include "PID.h"
 #include "Simulator.h"
-
 #include <string>
+#include <fstream>
 
 class Twiddle
 {
@@ -15,14 +15,18 @@ class Twiddle
   void Start();
 
  protected:
-  void SetBestError(unsigned int i, double error, double *best_error, std::ofstream &best_file);
+  void SetBestError(unsigned int i, double error, std::ofstream &best_file);
   virtual double Run() = 0;
   virtual std::string GetFileSuffix() = 0;
+  void PrintParams(double run_error);
 
  protected:
   double p[3];
   double dp[3];
   double threshold_;
+  double best_error_;
+  std::ofstream best_file;
+  std::ofstream result_file;
 };
 
 //class SteeringThrottleTwiddle : public Twiddle
@@ -52,7 +56,7 @@ class CarTwiddle: public Twiddle
     return desired_speed_ - measurement.speed;
   }
 
-  void OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement);
+  virtual void OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement);
 
  protected:
 
@@ -63,6 +67,7 @@ class CarTwiddle: public Twiddle
   double desired_speed_ = 30;
   int calc_after_iterations_ = 300;
   int stop_after_iterations_ = 3000;
+  unsigned int iterations = 0;
 };
 
 class SteeringTwiddle : public CarTwiddle
@@ -94,6 +99,7 @@ class ThrottleTwiddle : public CarTwiddle
     return pid_throttle_.TotalError();
   }
 
+  virtual void OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) override;
   virtual double Run() override;
   virtual void SetTwiddleParams(const TelemetryMessage &measurement) override;
 };

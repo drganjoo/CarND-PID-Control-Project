@@ -71,11 +71,18 @@ double PIDSimControl::GetDesiredSpeed(const TelemetryMessage &measurement) {
         }
     }
     else {
-        if (fabs(angle_to_check) > 5)
+        if (fabs(angle_to_check) > 5) {
             breaking_iterations = 0;
+            desired_speed = BREAKING_SPEED;
+        }
         else if (breaking_iterations++ > 30) {
+            // enough time has passed at this speed and the cte is within
+            // acceptable range so lets accelerate again
             is_breaking = false;
             desired_speed = MAX_SPEED;
+        }
+        else {
+            desired_speed = BREAKING_SPEED;
         }
     }
 
