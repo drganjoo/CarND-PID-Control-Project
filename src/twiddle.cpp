@@ -197,29 +197,29 @@ double ThrottleTwiddle::Run() {
 
 void ThrottleTwiddle::OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
   static double last_speed = measurement.speed;
-  static unsigned int count_reverse = 0;
+  static double speed_integral = 0;
 
   if (measurement.throttle < 0) {
-    double d_speed = measurement.speed - last_speed;
+    double speed_derivative = measurement.speed - last_speed;
     last_speed = measurement.speed;
 
-    if (d_speed >= 0) {
+    if (speed_derivative >= 0) {
+      speed_integral += speed_derivative;
+
       // hmmm is the car going in reverse now since the throttle is -ve
       // but speed is increasing. Lets see for the next few seconds to make sure this
       // happens
-      count_reverse++;
-
-      if (count_reverse >= 30) {
+      if (speed_integral >= 5) {
         // for sure it is going in reverse, lets stop and return a big number from total error
         pid_throttle_.UpdateError(INT_MAX, true);
         sim_.Stop();
       }
     }
     else {
-      count_reverse = 0;
+      speed_integral = 0;
     }
   } else {
-    count_reverse = 0;
+    speed_integral = 0;
   }
 
   CarTwiddle::OnTelemetry(ws, measurement);

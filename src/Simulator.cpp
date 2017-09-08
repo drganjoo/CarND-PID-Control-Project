@@ -79,7 +79,7 @@ void Simulator::InitialOnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, siz
   if (0 == status)
     SendManualMode(ws);
   else if (status > 0) {
-    if (fabs(measurement.cte) < 1.0) {
+    if ((fabs(measurement.cte) < 1.0) && (measurement.speed < 1)) {
       initialize_fp(ws, measurement);
 
       hub_.onMessage(std::bind(&Simulator::OnMessage, this, _1, _2, _3, _4));
