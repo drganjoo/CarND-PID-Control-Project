@@ -11,15 +11,16 @@
 #include "PID.h"
 
 class PIDSimControl {
-public:
-    void Run();
-    void SetDesiredSpeed(const TelemetryMessage &measurement);
-    double GetThrottle(const TelemetryMessage &measurement);
+ public:
+  PIDSimControl();
+  void Run();
+  void SetDesiredSpeed(const TelemetryMessage &measurement);
+  double GetThrottle(const TelemetryMessage &measurement);
 
-private:
-    PID pid_steering;
-    PIDThrottle pid_throttle;
-    Simulator s;
+ private:
+  PIDSteering pid_steering;
+  PIDThrottle pid_throttle;
+  Simulator s;
 };
 
 

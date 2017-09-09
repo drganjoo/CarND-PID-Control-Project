@@ -8,58 +8,75 @@
 
 class PID {
  public:
-  PID();
-  PID(std::string debug_name);
+  PID(double init_kp, double init_ki, double init_kd);
 
   virtual ~PID() = default;
 
-  virtual void Init(double Kp, double Ki, double Kd, double init_cte);
-  virtual void UpdateError(double cte, double dt_secs, bool include_in_error = false);
+  void SetInitialCte(const TelemetryMessage &measurement);
+  double GetOutput(const TelemetryMessage &measurement);
 
-  double TotalError();
-  double GetOutput();
+  double GetAccumError() const{
+    return accum_error_;
+  }
 
-  double GetDError() {
+  double GetDError() const{
       return d_error_;
   }
 
-  double GetKp() {
+  double GetKp() const{
       return kp_;
   }
 
-  double GetKi() {
+  double GetKi() const{
       return ki_;
   }
 
- private:
+  void ResetTotalError() {
+    accum_error_ = 0;
+  }
+
+
+ protected:
+  virtual double GetCte(const TelemetryMessage &measurement) = 0;
+
+ protected:
+  const double kp_;
+  const double ki_;
+  const double kd_;
   double p_error_;
   double i_error_;
   double d_error_;
-  double kp_;
-  double ki_;
-  double kd_;
-  double total_error_;
+  double accum_error_;
   std::string debug_name_;
 };
 
+
+class PIDSteering : public PID {
+ public:
+  PIDSteering(double init_kp, double init_ki, double init_kd) :
+      PID(init_kp, init_ki, init_kd){
+  }
+
+  double GetCte(const TelemetryMessage &measurement) override {
+    return measurement.cte;
+  }
+};
+
+
 class PIDThrottle : public PID{
  public:
-  PIDThrottle();
-  PIDThrottle(double desired_speed);
-  PIDThrottle(std::string debug_name) : PID(debug_name){}
+  PIDThrottle(double init_kp, double init_ki, double init_kd) :
+      PID(init_kp, init_ki, init_kd){
+    desired_speed_ = 30;
+  }
 
   ~PIDThrottle() = default;
 
-  void Init(double Kp, double Ki, double Kd, double init_cte) override ;
-  virtual void Init(double init_kp, double init_ki, double init_kd, const TelemetryMessage &measurement);
-
-  void UpdateError(double cte, double dt_secs, bool include_in_error = false) override;
-  void UpdateError(const TelemetryMessage &measurement, bool include_in_error = false);
   void SetDesiredSpeed(const double desired_speed) {
     desired_speed_ = desired_speed;
   }
 
-  inline double GetCte(const TelemetryMessage &measurement) {
+  double GetCte(const TelemetryMessage &measurement) override {
     return desired_speed_ - measurement.speed;
   }
 

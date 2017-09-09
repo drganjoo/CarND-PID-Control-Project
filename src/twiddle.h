@@ -5,6 +5,7 @@
 #include "Simulator.h"
 #include <string>
 #include <fstream>
+#include <memory>
 
 class Twiddle
 {
@@ -31,7 +32,7 @@ class Twiddle
 
   void OpenLogFiles();
   void WriteResultToLog(double error);
-  bool RunGivesInferiorResult(unsigned int i);
+  bool RunGivesBetterResult(unsigned int i);
 };
 
 //class SteeringThrottleTwiddle : public Twiddle
@@ -46,13 +47,14 @@ class Twiddle
 //	}
 //};
 
+/*----------------------------------------------------------------------------------------*/
+
 class CarTwiddle: public Twiddle
 {
  public:
-  explicit CarTwiddle(double init_threshold);
+  explicit CarTwiddle(double init_threshold, PIDThrottle *pid_throttle, PIDSteering *pid_steering);
   virtual ~CarTwiddle() = default;
 
-  virtual void SetTwiddleParams(const TelemetryMessage &measurement) = 0;
   virtual double GetTotalError() = 0;
   virtual double Run() override;
 
@@ -62,13 +64,16 @@ class CarTwiddle: public Twiddle
  protected:
 
   Simulator sim_;
-  PIDThrottle pid_throttle_;
-  PID pid_steering_;
+  PIDThrottle *pid_throttle_;
+  PIDSteering *pid_steering_;
 
   unsigned int calc_after_iterations_ = 300;
   unsigned int stop_after_iterations_ = 3000;
   unsigned int iterations = 0;
 };
+
+/*----------------------------------------------------------------------------------------*/
+
 
 class SteeringTwiddle : public CarTwiddle
 {
@@ -80,29 +85,34 @@ class SteeringTwiddle : public CarTwiddle
   }
 
   double GetTotalError() override{
-    return pid_steering_.TotalError();
+    return pid_steering_.GetAccumError();
   }
 
-  void SetTwiddleParams(const TelemetryMessage &measurement) override;
+ protected:
+  PIDSteering pid_steering_;
+  PIDThrottle pid_throttle_;
 };
 
+/*----------------------------------------------------------------------------------------*/
 
 class ThrottleTwiddle : public CarTwiddle
 {
  public:
-  explicit ThrottleTwiddle(double init_threshold, double desired_speed = 30);
+  explicit ThrottleTwiddle(double init_threshold, double desired_speed);
 
   std::string GetFileSuffix() override{
     return "throttle";
   }
 
   double GetTotalError() override{
-    return pid_throttle_.TotalError();
+    return pid_throttle_.GetAccumError();
   }
 
   void OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) override;
-  double Run() override;
-  void SetTwiddleParams(const TelemetryMessage &measurement) override;
+
+ protected:
+  PIDSteering pid_steering_;
+  PIDThrottle pid_throttle_;
 };
 
 #endif // !__TWIDDLE__

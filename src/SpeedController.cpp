@@ -4,7 +4,9 @@
 
 #include "SpeedController.h"
 #include "Simulator.h"
+#include "PID.h"
 #include <fstream>
+#include <memory>
 
 using namespace std;
 
@@ -13,6 +15,8 @@ SpeedController::SpeedController(double desired_speed) {
 
   ifstream params;
   params.open("throttle_pid.txt");
+
+  double kp, ki, kd;
 
   if (params.is_open()){
     params >> kp >> ki >> kd;
@@ -25,49 +29,55 @@ SpeedController::SpeedController(double desired_speed) {
     kd = 0.0;
   }
 
+  pid_throttle_ = unique_ptr<PIDThrottle>(new PIDThrottle(kp, ki, kd));
   cout << "Throttle params: " << kp << ", " << ki << ", " << kd << endl;
 }
 
 double SpeedController::GetThrottle(const TelemetryMessage &measurement) {
-  double throttle;
+  SetDesiredSpeed(measurement);
+  return pid_throttle_->GetOutput(measurement);
+}
 
-  if (fabs(measurement.angle) > 1.2) {
-    desired_speed_ = 20;
+
+void SpeedController::SetDesiredSpeed(const TelemetryMessage &measurement) {
+  const double MAX_SPEED = 70;
+  const double BREAKING_SPEED = 20;
+
+  static bool is_breaking = false;
+  static int breaking_iterations = 0;
+
+  double desired_speed;
+  double cte_angle = rad2deg(measurement.cte);
+//        const double angle_to_check = measurement.angle;
+  const double angle_to_check = cte_angle;
+
+  cout << "Angle to check: " << angle_to_check << endl;
+
+  if (!is_breaking) {
+    if (fabs(angle_to_check) > 5) {
+      breaking_iterations = 0;
+      is_breaking = true;
+      desired_speed = BREAKING_SPEED;
+    }
+    else {
+      desired_speed = MAX_SPEED ;
+    }
+  }
+  else {
+    if (fabs(angle_to_check) > 5) {
+      breaking_iterations = 0;
+      desired_speed = BREAKING_SPEED;
+    }
+    else if (breaking_iterations++ > 30) {
+      // enough time has passed at this speed and the cte is within
+      // acceptable range so lets accelerate again
+      is_breaking = false;
+      desired_speed = MAX_SPEED;
+    }
+    else {
+      desired_speed = BREAKING_SPEED;
+    }
   }
 
-  double speed_cte = desired_speed_ - measurement.speed;
-
-  double p_error = speed_cte;
-  double d_error = speed_cte - last_cte_;
-  i_error_ += speed_cte;
-  last_cte_ = d_error;
-
-  throttle = p_error * kp + i_error_ * ki + d_error * kd;
-
-  if (throttle > 1)
-    throttle = 1;
-  else if (throttle < -1)
-    throttle = -1;
-
-  if (measurement.speed > 35) {
-    cout << "throttle " << throttle << endl;
-  }
-
-  // slow down on turns
-//  if (fabs(measurement.angle) > 1.2) {
-//    if (measurement.speed > 50) {
-//      throttle = -1;
-//    }
-//    else if (measurement.speed > 35) {
-//      throttle = -0.5;
-//    }
-//    else if (measurement.speed > 25) {
-//      throttle = -0.2;
-//    }
-//    else {
-//      throttle = 0.1;
-//    }
-//  }
-
-  return throttle;
+  pid_throttle_->SetDesiredSpeed(desired_speed);
 }

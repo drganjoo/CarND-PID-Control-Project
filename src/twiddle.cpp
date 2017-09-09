@@ -41,11 +41,11 @@ void Twiddle::Start() {
       // increment in the positive direction and check results are inferior or better
       p[i] += dp[i];
 
-      if (RunGivesInferiorResult(i)) {
+      if (!RunGivesBetterResult(i)) {
         // Go in the opposite direction
         p[i] -= 2 * dp[i];
 
-        if (RunGivesInferiorResult(i)) {
+        if (!RunGivesBetterResult(i)) {
           // Both inc / dec give inferior, go back and change dp to a lower value
           p[i] += dp[i];
           dp[i] *= 0.9;
@@ -120,21 +120,21 @@ void Twiddle::StartCheckBoth() {
 }
 
 
-bool Twiddle::RunGivesInferiorResult(unsigned int i) {
+bool Twiddle::RunGivesBetterResult(unsigned int i) {
   double error = Run();
+
   PrintParams(error);
   WriteResultToLog(error);
 
-  bool inferior = true;
-  if (error < best_error_) {
-    inferior = false;
+  bool better = error < best_error_;
+
+  if (better) {
     SaveAndLogBestError(i, error);
 
-    // check for a bigger inc / dec next time
-    dp[i] *= 1.1;
+    dp[i] *= 1.1;   // next time look for bigger inc / dec.
   }
 
-  return inferior;
+  return better;
 }
 
 void Twiddle::WriteResultToLog(double error){
@@ -178,22 +178,20 @@ void Twiddle::PrintParams(double run_error) {
 
 /*----------------------------------------------------------------------------------------*/
 
-CarTwiddle::CarTwiddle(double init_threshold) : Twiddle(init_threshold),
-                                                pid_throttle_("throttle"),
-                                                pid_steering_("steering")
+CarTwiddle::CarTwiddle(double init_threshold, PIDThrottle *pid_throttle,
+                       PIDSteering *pid_steering) : Twiddle(init_threshold),
+  pid_throttle_(pid_throttle),
+  pid_steering_(pid_steering)
 {
 }
 
 void CarTwiddle::OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
-
   iterations++;
 
-  pid_throttle_.UpdateError(measurement, iterations > calc_after_iterations_);
-  pid_steering_.UpdateError(measurement.cte, measurement.dt_secs, iterations > calc_after_iterations_);
-
   ControlInput control;
-  control.throttle = pid_throttle_.GetOutput();
-  control.steering = pid_steering_.GetOutput();
+
+  control.throttle = pid_throttle_->GetOutput(measurement);
+  control.steering = pid_steering_->GetOutput(measurement);
 
   //		cout << iterations << ": Measurement --> cte:" << measurement.cte
   //			 << ", speed: " << measurement.speed << ", angle: " << measurement.angle
@@ -210,26 +208,27 @@ void CarTwiddle::OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMes
 
 double CarTwiddle::Run() {
   sim_.OnInitialize([&](uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
-    SetTwiddleParams(measurement);
+    pid_steering_->SetInitialCte(measurement);
+    pid_throttle_->SetInitialCte(measurement);
+
     iterations = 0;
   });
 
   sim_.OnTelemetry(std::bind(&CarTwiddle::OnTelemetry, this, _1, _2));
 
   sim_.Run();
-
   return GetTotalError();
 }
 
 /*----------------------------------------------------------------------------------------*/
 
-void SteeringTwiddle::SetTwiddleParams(const TelemetryMessage &measurement) {
-  pid_steering_.Init(p[0], p[1], p[2], measurement.cte);
-  pid_throttle_.Init(-0.192793,-0.0125629,-0.3111750, measurement);
+SteeringTwiddle::SteeringTwiddle(double init_threshold) :
+      CarTwiddle(init_threshold, &pid_throttle_, &pid_steering_),
+      pid_steering_(p[0], p[1], p[2]),
+      pid_throttle_(-0.192793,-0.0125629,-0.3111750)
+{
   pid_throttle_.SetDesiredSpeed(20.0);
-}
 
-SteeringTwiddle::SteeringTwiddle(double init_threshold) : CarTwiddle(init_threshold) {
   p[0] = 0.9;
   dp[0] = 0.04;
 
@@ -245,12 +244,11 @@ SteeringTwiddle::SteeringTwiddle(double init_threshold) : CarTwiddle(init_thresh
 
 /*----------------------------------------------------------------------------------------*/
 
-void ThrottleTwiddle::SetTwiddleParams(const TelemetryMessage &measurement) {
-  pid_steering_.Init(0.1, 0, 0.003, measurement.cte);
-  pid_throttle_.Init(p[0], p[1], p[2], measurement);
-}
+ThrottleTwiddle::ThrottleTwiddle(double init_threshold, double desired_speed) :
+    CarTwiddle(init_threshold, &pid_throttle_, &pid_steering_),
+    pid_steering_(0.1, 0, 0.003),
+    pid_throttle_(p[0], p[1], p[2]) {
 
-ThrottleTwiddle::ThrottleTwiddle(double init_threshold, double desired_speed /*= 30 */) : CarTwiddle(init_threshold) {
   p[0] = -0.05;
   dp[0] = 0.04;
 
@@ -264,10 +262,6 @@ ThrottleTwiddle::ThrottleTwiddle(double init_threshold, double desired_speed /*=
   stop_after_iterations_ = 900;
 
   pid_throttle_.SetDesiredSpeed(desired_speed);
-}
-
-double ThrottleTwiddle::Run() {
-  return CarTwiddle::Run();
 }
 
 void ThrottleTwiddle::OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
@@ -285,9 +279,9 @@ void ThrottleTwiddle::OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const Telemet
       // but speed is increasing. Lets see for the next few seconds to make sure this
       // happens
       if (speed_integral >= 5) {
-        cout << "stopping!!! car is going in reverse" << endl;
         // for sure it is going in reverse, lets stop and return a big number from total error
-        pid_throttle_.UpdateError(INT_MAX, true);
+
+        cout << "stopping!!! car is going in reverse" << endl;
         sim_.Stop();
       }
     }

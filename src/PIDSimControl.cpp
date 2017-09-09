@@ -7,16 +7,21 @@
 
 using namespace std;
 
+PIDSimControl::PIDSimControl() :
+  pid_steering(0.077, 0.00561549, -2.0),
+  pid_throttle(1.56807, 0.00243957, -0.0972004)
+{
+
+}
+
 void PIDSimControl::Run()
 {
   ofstream log;
   int iterations = 0;
 
   s.OnInitialize([&](uWS::WebSocket <uWS::SERVER> &ws, const TelemetryMessage &measurement) {
-    //pid_steering_.Init(0.1, 0.00461549, -4.0861, measurement.cte);
-    //pid_steering_.Init(0.08, 0.00461549, -2.0, measurement.cte);
-    pid_steering.Init(0.077, 0.00561549, -2.0, measurement.cte);
-    pid_throttle.Init(1.56807, 0.00243957, -0.0972004, measurement);
+    pid_steering.SetInitialCte(measurement);
+    pid_throttle.SetInitialCte(measurement);
 
     log.open("data.log");
     s.SendReset(ws);
@@ -25,9 +30,7 @@ void PIDSimControl::Run()
   s.OnTelemetry([&](uWS::WebSocket <uWS::SERVER> &ws, const TelemetryMessage &measurement) {
     ControlInput control;
 
-    pid_steering.UpdateError(measurement.cte, measurement.dt_secs, true);
-    control.steering = pid_steering.GetOutput();
-
+    control.steering = pid_steering.GetOutput(measurement);
     control.throttle = GetThrottle(measurement);
 
     s.SendControl(ws, control);
@@ -91,8 +94,5 @@ void PIDSimControl::SetDesiredSpeed(const TelemetryMessage &measurement) {
 
 double PIDSimControl::GetThrottle(const TelemetryMessage &measurement) {
   SetDesiredSpeed(measurement);
-
-  pid_throttle.UpdateError(measurement, true);
-
-  return pid_throttle.GetOutput();
+  return pid_throttle.GetOutput(measurement);
 }
