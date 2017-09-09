@@ -25,7 +25,7 @@ void ThrottleTest(){
   Simulator s;
   //PIDThrottle pid_throttle(20);
   SpeedController speed_controller(40);
-  PIDSteering pid_steering(-0.07, 0, 5);
+  PIDSteering pid_steering(-0.07, 0, -50);
 
   int iterations = 0;
   int stop_after_iterations = 4000;
