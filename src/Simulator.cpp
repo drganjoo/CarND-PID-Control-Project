@@ -28,6 +28,9 @@ Simulator::Simulator()
 
 
 int Simulator::Parse(char *data, size_t length, TelemetryMessage *measurement) {
+  static chrono::time_point<system_clock> last_call = system_clock::now();
+  static unsigned int total_calls = 0;
+
   data[length] = 0;
   string line = data;
   int ret_code = -1;
@@ -42,6 +45,8 @@ int Simulator::Parse(char *data, size_t length, TelemetryMessage *measurement) {
       auto wsEvent = jsonObj[0].get<std::string>();
 
       if (wsEvent == "telemetry") {
+        total_calls++;
+        
         measurement->cte = stod(jsonObj[1]["cte"].get<string>());
         measurement->speed = stod(jsonObj[1]["speed"].get<string>());
         measurement->angle = stod(jsonObj[1]["steering_angle"].get<string>());
@@ -57,6 +62,13 @@ int Simulator::Parse(char *data, size_t length, TelemetryMessage *measurement) {
         measurement->dt_secs = duration_secs.count();
         last_call_tp_ = system_clock::now();
 
+        if ((system_clock::now() - last_call).count() >= 1) {
+          last_call = system_clock::now();
+          frames_per_sec_ = total_calls;
+          total_calls = 0;
+
+          cout << frames_per_sec_ << endl;
+        }
         ret_code = 1;
       }
     }

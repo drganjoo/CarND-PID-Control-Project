@@ -66,7 +66,7 @@ void ThrottleTest(){
 int main()
 {
   //RunPid();
-  //RunSteeringTwiddle();
+  RunSteeringTwiddle();
   //RunThrottleTwiddle();
-  ThrottleTest();
+  //ThrottleTest();
 }

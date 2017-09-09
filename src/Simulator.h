@@ -62,4 +62,5 @@ class Simulator
   ControlInput last_control_;
   unsigned int settle_down_iterations_ = 0;
   std::chrono::time_point<std::chrono::system_clock> last_call_tp_;
+  unsigned int frames_per_sec_ = 0;
 };
