@@ -4,12 +4,12 @@
 #include <fstream>
 #include "twiddle.h"
 #include "Simulator.h"
+#include "SpeedController.h"
 
 using namespace std;
 
 void RunPid() {
 }
-
 
 void RunSteeringTwiddle() {
   SteeringTwiddle t(0.00002);
@@ -23,7 +23,8 @@ void RunThrottleTwiddle() {
 
 void ThrottleTest(){
   Simulator s;
-  PIDThrottle pid_throttle(20);
+  //PIDThrottle pid_throttle(20);
+  SpeedController speed_controller(40);
   PID pid_steering;
 
   int iterations = 0;
@@ -32,8 +33,8 @@ void ThrottleTest(){
   s.OnInitialize([&](uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
     //pid_throttle.Init(-0.1, -0.0054, 0, desired_speed - measurement.speed);
     //pid_throttle.Init(-0.1, -0.003, 0, desired_speed - measurement.speed);
-    pid_throttle.Init(-0.08, 0, 0, measurement);
-    pid_steering.Init(0.08, 0, 0, measurement.cte);
+    //pid_throttle.Init(-0.08, 0, 0, measurement);
+    pid_steering.Init(0.06, 0, 0, measurement.cte);
   });
 
   s.OnTelemetry([&](uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
@@ -41,16 +42,18 @@ void ThrottleTest(){
 
     iterations++;
 
-    pid_throttle.UpdateError(measurement, true);
-    control.throttle = pid_throttle.GetOutput();
+    //pid_throttle.UpdateError(measurement, true);
+    //control.throttle = pid_throttle.GetOutput();
+
+    control.throttle = speed_controller.GetThrottle(measurement);
 
     pid_steering.UpdateError(measurement.cte, true);
     control.steering = pid_steering.GetOutput();
 
-    cout << iterations << ": Measurement --> cte:" << measurement.cte
-         << ", speed: " << measurement.speed << ", angle: " << measurement.angle
-         << " Control ->  steering: " << control.steering
-         << " throttle: " << control.throttle << endl;
+//    cout << iterations << ": Measurement --> cte:" << measurement.cte
+//         << ", speed: " << measurement.speed << ", angle: " << measurement.angle
+//         << " Control ->  steering: " << control.steering
+//         << " throttle: " << control.throttle << endl;
 
     s.SendControl(ws, control);
 
@@ -66,7 +69,7 @@ void ThrottleTest(){
 int main()
 {
   //RunPid();
-  RunSteeringTwiddle();
+  //RunSteeringTwiddle();
   //RunThrottleTwiddle();
-  //ThrottleTest();
+  ThrottleTest();
 }

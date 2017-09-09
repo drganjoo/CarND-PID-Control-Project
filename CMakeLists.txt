@@ -6,7 +6,7 @@ add_definitions(-std=c++11)
 
 set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS "${CXX_FLAGS}")
-set(sources src/PID.cpp src/main.cpp src/Simulator.cpp src/twiddle.cpp src/helpers.cpp src/PIDSimControl.cpp src/PIDSimControl.h)
+set(sources src/PID.cpp src/main.cpp src/Simulator.cpp src/twiddle.cpp src/helpers.cpp src/PIDSimControl.cpp src/PIDSimControl.h src/SpeedController.cpp src/SpeedController.h)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
 

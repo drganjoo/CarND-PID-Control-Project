@@ -28,7 +28,7 @@ Simulator::Simulator()
 
 
 int Simulator::Parse(char *data, size_t length, TelemetryMessage *measurement) {
-  static chrono::time_point<system_clock> last_call = system_clock::now();
+  static chrono::milliseconds one_sec_ago = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
   static unsigned int total_calls = 0;
 
   data[length] = 0;
@@ -46,7 +46,7 @@ int Simulator::Parse(char *data, size_t length, TelemetryMessage *measurement) {
 
       if (wsEvent == "telemetry") {
         total_calls++;
-        
+
         measurement->cte = stod(jsonObj[1]["cte"].get<string>());
         measurement->speed = stod(jsonObj[1]["speed"].get<string>());
         measurement->angle = stod(jsonObj[1]["steering_angle"].get<string>());
@@ -57,17 +57,20 @@ int Simulator::Parse(char *data, size_t length, TelemetryMessage *measurement) {
         //measurement->throttle = stod(jsonObj[1]["throttle"].get<string>());
         measurement->throttle = last_control_.throttle;
 
-        time_point<system_clock> end = system_clock::now();
-        duration<double> duration_secs = end - last_call_tp_;
-        measurement->dt_secs = duration_secs.count();
-        last_call_tp_ = system_clock::now();
+        milliseconds now  = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        measurement->dt_secs = (now.count() - last_call_.count()) / 1000.0;
+        last_call_ = now;
 
-        if ((system_clock::now() - last_call).count() >= 1) {
-          last_call = system_clock::now();
+//        cout << "DT_Secs: " << measurement->dt_secs << endl;
+
+        if ((now.count() - one_sec_ago.count()) >= 1000) {
+//          cout << "Frames / Sec: " << frames_per_sec_ << endl;
+
+          one_sec_ago = now;
           frames_per_sec_ = total_calls;
           total_calls = 0;
 
-          cout << frames_per_sec_ << endl;
+//          cout << frames_per_sec_ << endl;|
         }
         ret_code = 1;
       }
@@ -84,7 +87,7 @@ void Simulator::SendResetOnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, s
   last_control_.steering = 0;
   last_control_.throttle = 0;
   settle_down_iterations_ = 0;
-  last_call_tp_ = system_clock::now();
+  last_call_  = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 }
 
 
@@ -97,7 +100,7 @@ void Simulator::InitialOnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, siz
       measurement.dt_secs = 0;
       initialize_fp(ws, measurement);
 
-      last_call_tp_ = system_clock::now();
+      last_call_  = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 
       // don't call us next time, call the telemetry handler function
       hub_.onMessage(std::bind(&Simulator::OnMessage, this, _1, _2, _3, _4));
