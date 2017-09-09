@@ -9,6 +9,17 @@
 #include "PID.h"
 #include <memory>
 
+
+struct CarState {
+  bool is_breaking;
+  double steering_ok_for_ms;
+
+  CarState() {
+    is_breaking = 0;
+    steering_ok_for_ms = 0;
+  }
+};
+
 class SpeedController {
  public:
   SpeedController(double desired_speed);
@@ -22,14 +33,15 @@ class SpeedController {
   void SetDesiredSpeed(const TelemetryMessage &measurement);
 
  private:
-  double desired_speed_;
-  std::unique_ptr<PIDThrottle> pid_throttle_;
+  const double max_angle_;
+  const double breaking_speed_;
+  const double min_good_secs_;
 
-//  double last_cte_ = 0;
-//  double i_error_ = 0;
-//  double kp;
-//  double ki;
-//  double kd;
+  double max_speed_;
+
+  CarState state_;
+
+  std::unique_ptr<PIDThrottle> pid_throttle_;
 };
 
 #endif //PID_SPEEDCONTROLLER_H

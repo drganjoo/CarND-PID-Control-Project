@@ -25,10 +25,10 @@ void ThrottleTest(){
   Simulator s;
   //PIDThrottle pid_throttle(20);
   SpeedController speed_controller(40);
-  PIDSteering pid_steering(0.06, 0, 0);
+  PIDSteering pid_steering(-0.07, 0, 5);
 
   int iterations = 0;
-  int stop_after_iterations = 2000;
+  int stop_after_iterations = 4000;
 
   s.OnInitialize([&](uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
     //pid_throttle.Initialize(-0.1, -0.0054, 0, desired_speed - measurement.speed);

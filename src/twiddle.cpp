@@ -247,7 +247,8 @@ SteeringTwiddle::SteeringTwiddle(double init_threshold) :
 ThrottleTwiddle::ThrottleTwiddle(double init_threshold, double desired_speed) :
     CarTwiddle(init_threshold, &pid_throttle_, &pid_steering_),
     pid_steering_(0.1, 0, 0.003),
-    pid_throttle_(p[0], p[1], p[2]) {
+    pid_throttle_(p[0], p[1], p[2])
+{
 
   p[0] = -0.05;
   dp[0] = 0.04;
