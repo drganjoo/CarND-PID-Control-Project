@@ -122,15 +122,14 @@ CarTwiddle::CarTwiddle(double init_threshold) : Twiddle(init_threshold),
 }
 
 void CarTwiddle::OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
-  ControlInput control;
 
   iterations++;
 
-  auto speed_cte = GetSpeedCte(measurement);
-  pid_throttle_.UpdateError(speed_cte, iterations > calc_after_iterations_);
-  control.throttle = pid_throttle_.GetOutput();
+  pid_throttle_.UpdateMeasurement(measurement, iterations > calc_after_iterations_);
+  pid_steering_.UpdateError(measurement.cte, measurement.dt_secs, iterations > calc_after_iterations_);
 
-  pid_steering_.UpdateError(measurement.cte, iterations > calc_after_iterations_);
+  ControlInput control;
+  control.throttle = pid_throttle_.GetOutput();
   control.steering = pid_steering_.GetOutput();
 
   //		cout << iterations << ": Measurement --> cte:" << measurement.cte
@@ -163,24 +162,29 @@ double CarTwiddle::Run() {
 
 void SteeringTwiddle::SetTwiddleParams(const TelemetryMessage &measurement) {
   pid_steering_.Init(p[0], p[1], p[2], measurement.cte);
-  pid_throttle_.Init(1.56807,0.00243957,-0.0972004, 30 - measurement.speed);
+  pid_throttle_.Init(-0.192793,-0.0125629,-0.3111750, measurement);
+  pid_throttle_.SetDesiredSpeed(20.0);
 }
 
 SteeringTwiddle::SteeringTwiddle(double init_threshold) : CarTwiddle(init_threshold) {
-  p[0] = 0.2;
-  dp[0] = 0.1;
+  p[0] = 0.9;
+  dp[0] = 0.04;
+
+  p[1] = 0.09;
+  dp[1] = 0.004;
+
+  calc_after_iterations_ = 800;
+  stop_after_iterations_ = 4000;
 }
 
 /*----------------------------------------------------------------------------------------*/
 
 void ThrottleTwiddle::SetTwiddleParams(const TelemetryMessage &measurement) {
   pid_steering_.Init(0.1, 0, 0.003, measurement.cte);
-  pid_throttle_.Init(p[0], p[1], p[2], GetSpeedCte(measurement));
+  pid_throttle_.Init(p[0], p[1], p[2], measurement);
 }
 
 ThrottleTwiddle::ThrottleTwiddle(double init_threshold, double desired_speed /*= 30 */) : CarTwiddle(init_threshold) {
-  desired_speed_ = desired_speed;
-
   p[0] = -0.05;
   dp[0] = 0.04;
 
@@ -192,6 +196,8 @@ ThrottleTwiddle::ThrottleTwiddle(double init_threshold, double desired_speed /*=
 
   calc_after_iterations_ = 60;
   stop_after_iterations_ = 900;
+
+  pid_throttle_.SetDesiredSpeed(desired_speed);
 }
 
 double ThrottleTwiddle::Run() {

@@ -29,22 +29,13 @@ void PID::Init(double init_kp, double init_ki, double init_kd, double init_cte) 
   i_error_ = 0;
   d_error_ = 0;
   total_error_ = 0;
-
-  last_time_ = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 }
 
-void PID::UpdateError(double cte, bool include_in_error /*= false */) {
-//    milliseconds now  = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-//    double dt_ms = (now.count() - last_time_.count()) / 1000.0;
-//    last_time_ = now;
-
-  //if (dt_ms == 0)
-  double dt = 0.1;
-
-  d_error_ = (cte - p_error_) / dt;
+void PID::UpdateError(double cte, double dt_secs, bool include_in_error /*= false */) {
+  d_error_ = (cte - p_error_) / dt_secs;
   p_error_ = cte;
 
-  double cte_dt = cte * dt;
+  double cte_dt = cte * dt_secs;
   i_error_ += cte_dt;
 
   if (include_in_error)
@@ -55,9 +46,6 @@ double PID::TotalError() {
   return total_error_;
 }
 
-void PID::SetLastCte(double cte) {
-  p_error_ = cte;
-}
 
 double PID::GetOutput() {
   double output = -kp_ * p_error_ - ki_ * i_error_ - kd_ * d_error_ ;
@@ -68,4 +56,25 @@ double PID::GetOutput() {
     output = -1;
 
   return output;
+}
+
+/*--------------------------------------------------------------------------------------------*/
+PIDThrottle::PIDThrottle() : PIDThrottle(30) {
+
+}
+
+PIDThrottle::PIDThrottle(double desired_speed) : PID() {
+  desired_speed_ = desired_speed;
+}
+
+void PIDThrottle::UpdateMeasurement(const TelemetryMessage &measurement, bool include_in_error) {
+  PID::UpdateError(GetCte(measurement), measurement.dt_secs, include_in_error);
+}
+
+void PIDThrottle::Init(double init_kp, double init_ki, double init_kd, const TelemetryMessage &measurement) {
+  Init(init_kp, init_ki, init_kd, GetCte(measurement));
+}
+
+void PIDThrottle::Init(double Kp, double Ki, double Kd, double init_cte) {
+  PID::Init(Kp, Ki, Kd, init_cte);
 }

@@ -52,7 +52,7 @@ int Simulator::Parse(char *data, size_t length, TelemetryMessage *measurement) {
         measurement->throttle = last_control_.throttle;
 
         milliseconds now  = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-        measurement->dt_ms = now.count() - last_call_.count();
+        measurement->dt_secs = (now.count() - last_call_.count()) / 1000.0;
         last_call_ = now;
 
         ret_code = 1;
@@ -80,8 +80,10 @@ void Simulator::InitialOnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, siz
   auto status = Parse(data, length, &measurement);
   if (status > 0) {
     if ((fabs(measurement.cte) < 1.0) && (measurement.speed < 1) && settle_down_iterations_++ > 100) {
-
+      measurement.dt_secs = 0;
       initialize_fp(ws, measurement);
+
+      last_call_ = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 
       // don't call us next time, call the telemetry handler function
       hub_.onMessage(std::bind(&Simulator::OnMessage, this, _1, _2, _3, _4));
@@ -94,13 +96,13 @@ void Simulator::InitialOnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, siz
 
 
 void Simulator::OnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
-  TelemetryMessage tm;
+  TelemetryMessage measurement;
 
-  auto status = Parse(data, length, &tm);
+  auto status = Parse(data, length, &measurement);
   if (0 == status)
     SendManualMode(ws);
   else if (status > 0)
-    telemetry_fn(ws, tm);
+    telemetry_fn(ws, measurement);
 }
 
 

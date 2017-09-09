@@ -11,7 +11,7 @@ struct TelemetryMessage {
   double speed;
   double angle;
   double throttle;
-  double dt_ms;
+  double dt_secs;
 
   friend std::ostream& operator << (std::ostream &os, const TelemetryMessage &m);
 };

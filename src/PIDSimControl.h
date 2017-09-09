@@ -13,12 +13,12 @@
 class PIDSimControl {
 public:
     void Run();
-    double GetDesiredSpeed(const TelemetryMessage &measurement);
+    void SetDesiredSpeed(const TelemetryMessage &measurement);
     double GetThrottle(const TelemetryMessage &measurement);
 
 private:
     PID pid_steering;
-    PID pid_throttle;
+    PIDThrottle pid_throttle;
     Simulator s;
 };
 
