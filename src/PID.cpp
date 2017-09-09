@@ -39,7 +39,7 @@ void PID::UpdateError(double cte, double dt_secs, bool include_in_error /*= fals
   i_error_ += cte_dt;
 
   if (include_in_error)
-    total_error_ += cte_dt * cte_dt;
+    total_error_ += cte;
 }
 
 double PID::TotalError() {

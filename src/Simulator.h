@@ -61,5 +61,5 @@ class Simulator
   uWS::Hub hub_;
   ControlInput last_control_;
   unsigned int settle_down_iterations_ = 0;
-  std::chrono::milliseconds last_call_;
+  std::chrono::time_point<std::chrono::system_clock> last_call_tp_;
 };

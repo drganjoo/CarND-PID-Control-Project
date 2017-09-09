@@ -55,6 +55,71 @@ void Twiddle::Start() {
   }
 }
 
+
+void Twiddle::StartCheckBoth() {
+  OpenLogFiles();
+
+  best_error_ = Run();
+  cout << "Initial run: P=" << p[0] << ", " << p[1] << ", " << p[2] << "\t Error: " << best_error_ << endl;
+
+  while (dp[0] + dp[1] + dp[2] > threshold_) {
+    for (unsigned int i = 0; i < 3; i++) {
+      // increment in the positive direction and check results are inferior or better
+      p[i] += dp[i];
+
+      cout << "P was: " << p[i] - dp[i] << ", trying higher: " << p[i] << endl;
+      double inc_error = Run();
+      PrintParams(inc_error);
+      WriteResultToLog(inc_error);
+
+      // lets try the other direction
+      p[i] -= 2 * dp[i];
+
+      cout << "P was: " << p[i] + dp[i] << ", trying lower: " << p[i] << endl;
+
+      double dec_error = Run();
+      PrintParams(dec_error);
+      WriteResultToLog(dec_error);
+
+      // get the better of the two
+      if (inc_error < dec_error) {
+        cout << "higher: " << inc_error << " was better than lower: " << dec_error;
+
+        if (inc_error < best_error_) {
+          cout << ", and even better than the overall best: " << best_error_ << endl;
+          best_error_ = inc_error;
+          // go back to the incremented state
+          p[i] += 2 * dp[i];
+          dp[i] *= 1.1;
+        } else {
+          cout << ", but not better than the overall best: " << best_error_ << endl;
+
+          p[i] += dp[i];
+          dp[i] *= 0.9;
+        }
+      }
+      else {
+        cout << "lower: " << dec_error << " was better than higher: " << inc_error;
+
+        if (dec_error < best_error_) {
+          cout << ", and even better than the overall best: " << best_error_ << endl;
+          best_error_ = dec_error;
+          dp[i] *= 1.1;
+        }
+        else {
+          cout << ", but not better than the overall best: " << best_error_ << endl;
+
+          // go back to the original state since neither incrementing nor decrementing
+          // gave us a better result
+          p[i] += dp[i];
+          dp[i] *= 0.9;
+        }
+      }
+    }
+  }
+}
+
+
 bool Twiddle::RunGivesInferiorResult(unsigned int i) {
   double error = Run();
   PrintParams(error);
@@ -175,7 +240,7 @@ SteeringTwiddle::SteeringTwiddle(double init_threshold) : CarTwiddle(init_thresh
   dp[2] = 1;
 
   calc_after_iterations_ = 800;
-  stop_after_iterations_ = 5000;
+  stop_after_iterations_ = 6000;
 }
 
 /*----------------------------------------------------------------------------------------*/

@@ -13,6 +13,7 @@ class Twiddle
   virtual ~Twiddle();
 
   void Start();
+  void StartCheckBoth();
 
  protected:
   void SaveAndLogBestError(unsigned int i, double error);

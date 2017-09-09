@@ -13,12 +13,12 @@ void RunPid() {
 
 void RunSteeringTwiddle() {
   SteeringTwiddle t(0.00002);
-  t.Start();
+  t.StartCheckBoth();
 }
 
 void RunThrottleTwiddle() {
   ThrottleTwiddle t(0.00002, 20.0);
-  t.Start();
+  t.StartCheckBoth();
 }
 
 void ThrottleTest(){

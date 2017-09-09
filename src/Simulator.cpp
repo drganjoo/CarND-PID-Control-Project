@@ -1,6 +1,7 @@
 #include "Simulator.h"
 #include "json.hpp"
 #include <chrono>
+#include <ctime>
 
 using namespace std;
 using namespace std::placeholders;
@@ -51,9 +52,10 @@ int Simulator::Parse(char *data, size_t length, TelemetryMessage *measurement) {
         //measurement->throttle = stod(jsonObj[1]["throttle"].get<string>());
         measurement->throttle = last_control_.throttle;
 
-        milliseconds now  = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-        measurement->dt_secs = (now.count() - last_call_.count()) / 1000.0;
-        last_call_ = now;
+        time_point<system_clock> end = system_clock::now();
+        duration<double> duration_secs = end - last_call_tp_;
+        measurement->dt_secs = duration_secs.count();
+        last_call_tp_ = system_clock::now();
 
         ret_code = 1;
       }
@@ -70,7 +72,7 @@ void Simulator::SendResetOnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, s
   last_control_.steering = 0;
   last_control_.throttle = 0;
   settle_down_iterations_ = 0;
-  last_call_ = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+  last_call_tp_ = system_clock::now();
 }
 
 
@@ -83,7 +85,7 @@ void Simulator::InitialOnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, siz
       measurement.dt_secs = 0;
       initialize_fp(ws, measurement);
 
-      last_call_ = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+      last_call_tp_ = system_clock::now();
 
       // don't call us next time, call the telemetry handler function
       hub_.onMessage(std::bind(&Simulator::OnMessage, this, _1, _2, _3, _4));
