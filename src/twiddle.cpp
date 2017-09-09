@@ -33,10 +33,8 @@ Twiddle::~Twiddle() {
 void Twiddle::Start() {
   OpenLogFiles();
 
-  for (int i = 0; i < 5; i++) {
-    best_error_ = Run();
-    cout << "Run # " << i << ": P=" << p[0] << ", " << p[1] << ", " << p[2] << "\t Error: " << best_error_ << endl;
-  }
+  best_error_ = Run();
+  cout << "Initial run: P=" << p[0] << ", " << p[1] << ", " << p[2] << "\t Error: " << best_error_ << endl;
 
   while (dp[0] + dp[1] + dp[2] > threshold_) {
     for (unsigned int i = 0; i < 3; i++) {
@@ -125,7 +123,7 @@ void CarTwiddle::OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMes
 
   iterations++;
 
-  pid_throttle_.UpdateMeasurement(measurement, iterations > calc_after_iterations_);
+  pid_throttle_.UpdateError(measurement, iterations > calc_after_iterations_);
   pid_steering_.UpdateError(measurement.cte, measurement.dt_secs, iterations > calc_after_iterations_);
 
   ControlInput control;
@@ -173,8 +171,11 @@ SteeringTwiddle::SteeringTwiddle(double init_threshold) : CarTwiddle(init_thresh
   p[1] = 0.09;
   dp[1] = 0.004;
 
+  p[2]  = 0;
+  dp[2] = 1;
+
   calc_after_iterations_ = 800;
-  stop_after_iterations_ = 4000;
+  stop_after_iterations_ = 5000;
 }
 
 /*----------------------------------------------------------------------------------------*/

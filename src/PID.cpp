@@ -67,7 +67,12 @@ PIDThrottle::PIDThrottle(double desired_speed) : PID() {
   desired_speed_ = desired_speed;
 }
 
-void PIDThrottle::UpdateMeasurement(const TelemetryMessage &measurement, bool include_in_error) {
+
+void PIDThrottle::UpdateError(double cte, double dt_secs, bool include_in_error /*= false */){
+  PID::UpdateError(cte, dt_secs, include_in_error);
+}
+
+void PIDThrottle::UpdateError(const TelemetryMessage &measurement, bool include_in_error) {
   PID::UpdateError(GetCte(measurement), measurement.dt_secs, include_in_error);
 }
 

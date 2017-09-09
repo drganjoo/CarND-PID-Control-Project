@@ -92,7 +92,7 @@ void PIDSimControl::SetDesiredSpeed(const TelemetryMessage &measurement) {
 double PIDSimControl::GetThrottle(const TelemetryMessage &measurement) {
   SetDesiredSpeed(measurement);
 
-  pid_throttle.UpdateMeasurement(measurement, true);
+  pid_throttle.UpdateError(measurement, true);
 
   return pid_throttle.GetOutput();
 }

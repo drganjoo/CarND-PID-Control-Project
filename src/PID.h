@@ -53,7 +53,8 @@ class PIDThrottle : public PID{
   void Init(double Kp, double Ki, double Kd, double init_cte) override ;
   virtual void Init(double init_kp, double init_ki, double init_kd, const TelemetryMessage &measurement);
 
-  void UpdateMeasurement(const TelemetryMessage &measurement, bool include_in_error = false);
+  void UpdateError(double cte, double dt_secs, bool include_in_error = false) override;
+  void UpdateError(const TelemetryMessage &measurement, bool include_in_error = false);
   void SetDesiredSpeed(const double desired_speed) {
     desired_speed_ = desired_speed;
   }

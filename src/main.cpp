@@ -33,7 +33,8 @@ void ThrottleTest(){
     //pid_throttle.Init(-0.1, -0.0054, 0, desired_speed - measurement.speed);
     //pid_throttle.Init(-0.1, -0.003, 0, desired_speed - measurement.speed);
     pid_throttle.Init(-0.192793,-0.0125629,-0.3111750, measurement);
-    pid_steering.Init(0.08, 0, 0, measurement.cte);
+    //pid_steering.Init(0.08, 0, 0, measurement.cte);
+    pid_steering.Init(0.895713,0.0935966,-0.4785370, measurement.cte);
   });
 
   s.OnTelemetry([&](uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
@@ -41,7 +42,7 @@ void ThrottleTest(){
 
     iterations++;
 
-    pid_throttle.UpdateMeasurement(measurement, true);
+    pid_throttle.UpdateError(measurement, true);
     control.throttle = pid_throttle.GetOutput();
 
     pid_steering.UpdateError(measurement.cte, true);
