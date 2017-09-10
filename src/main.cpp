@@ -13,12 +13,12 @@ void RunPid() {
 
 void RunSteeringTwiddle() {
   SteeringTwiddle t(0.00002);
-  t.StartCheckBoth();
+  t.StartAll();
 }
 
 void RunThrottleTwiddle() {
   ThrottleTwiddle t(0.00002, 20.0);
-  t.StartCheckBoth();
+  t.StartAll();
 }
 
 void ThrottleTest(){
@@ -46,7 +46,7 @@ void ThrottleTest(){
     //pid_throttle.UpdateError(measurement, true);
     //control.throttle = pid_throttle.GetOutput();
 
-    control.throttle = speed_controller.GetThrottle(measurement);
+    control.throttle = speed_controller.GetOutput(measurement);
     control.steering  = pid_steering.GetOutput(measurement);
 
 //    cout << iterations << ": Measurement --> cte:" << measurement.cte
@@ -68,7 +68,7 @@ void ThrottleTest(){
 int main()
 {
   //RunPid();
-  //RunSteeringTwiddle();
+  RunSteeringTwiddle();
   //RunThrottleTwiddle();
-  ThrottleTest();
+  //ThrottleTest();
 }

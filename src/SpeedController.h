@@ -24,7 +24,7 @@ class SpeedController {
  public:
   SpeedController(double desired_speed);
 
-  double GetThrottle(const TelemetryMessage &measurement);
+  double GetOutput(const TelemetryMessage &measurement);
   void SetInitialCte(const TelemetryMessage &measurement) {
     pid_throttle_->SetInitialCte(measurement);
   }

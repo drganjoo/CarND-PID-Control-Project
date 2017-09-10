@@ -30,7 +30,9 @@ Twiddle::~Twiddle() {
     result_file_.close();
 }
 
-void Twiddle::Start() {
+void Twiddle::StartAll() {
+  double error;
+
   OpenLogFiles();
 
   best_error_ = Run();
@@ -41,16 +43,59 @@ void Twiddle::Start() {
       // increment in the positive direction and check results are inferior or better
       p[i] += dp[i];
 
-      if (!RunGivesBetterResult(i)) {
+      if (!RunGivesBetterResult(i, &error)) {
         // Go in the opposite direction
         p[i] -= 2 * dp[i];
 
-        if (!RunGivesBetterResult(i)) {
+        if (!RunGivesBetterResult(i, &error)) {
           // Both inc / dec give inferior, go back and change dp to a lower value
           p[i] += dp[i];
           dp[i] *= 0.9;
         }
       }
+    }
+  }
+}
+
+
+void Twiddle::StartForIndex(int index) {
+  double error;
+
+  OpenLogFiles();
+
+  best_error_ = Run();
+  cout << "Initial run: P=" << p[0] << ", " << p[1] << ", " << p[2] << "\t Error: " << best_error_ << endl;
+
+  while (dp[index] > threshold_) {
+    p[index] += dp[index];          // inc Kp (or Ki or Kd)
+
+    cout << "Trying higher value for K[" << index << "] = " << p[index];
+
+    if (!RunGivesBetterResult(index, &error)) {
+
+      cout << ", which does not gives us a better result " << best_error_ << " < " << error << endl;
+
+      // incrementing did not result in a better value
+      p[index] -= 2 * dp[index];    // dec Kp (or Ki or kd)
+
+      cout << "Trying a lower value for K[" << index << "] = " << p[index];
+
+      if (!RunGivesBetterResult(index, &error)) {
+
+        cout << ", which does not gives us a better result " << best_error_ << " < " << error << endl;
+
+        // Both inc / dec give inferior, go back and change dp to a lower value
+        p[index] += dp[index];
+        dp[index] *= 0.9;
+
+        cout << "Making P go back to " << p[index] << " BUT changing dp[" << index << "] to " << dp[index] << endl;
+      }
+      else {
+        cout << ", which gives us a better result of: " << error << endl;
+      }
+    }
+    else {
+      cout << ", which gives us a better result of: " << error << endl;
     }
   }
 }
@@ -120,16 +165,14 @@ void Twiddle::StartCheckBoth() {
 }
 
 
-bool Twiddle::RunGivesBetterResult(unsigned int i) {
-  double error = Run();
+bool Twiddle::RunGivesBetterResult(unsigned int i, double *error) {
+  *error = Run();
 
-  PrintParams(error);
-  WriteResultToLog(error);
-
-  bool better = error < best_error_;
+  WriteResultToLog(*error);
+  bool better = *error < best_error_;
 
   if (better) {
-    SaveAndLogBestError(i, error);
+    SaveAndLogBestError(i, *error);
 
     dp[i] *= 1.1;   // next time look for bigger inc / dec.
   }
@@ -175,23 +218,13 @@ void Twiddle::PrintParams(double run_error) {
        << endl;
 }
 
-
 /*----------------------------------------------------------------------------------------*/
-
-CarTwiddle::CarTwiddle(double init_threshold, PIDThrottle *pid_throttle,
-                       PIDSteering *pid_steering) : Twiddle(init_threshold),
-  pid_throttle_(pid_throttle),
-  pid_steering_(pid_steering)
-{
-}
 
 void CarTwiddle::OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
   iterations++;
 
   ControlInput control;
-
-  control.throttle = pid_throttle_->GetOutput(measurement);
-  control.steering = pid_steering_->GetOutput(measurement);
+  SetControl(&control, measurement);
 
   //		cout << iterations << ": Measurement --> cte:" << measurement.cte
   //			 << ", speed: " << measurement.speed << ", angle: " << measurement.angle
@@ -208,44 +241,49 @@ void CarTwiddle::OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMes
 
 double CarTwiddle::Run() {
   sim_.OnInitialize([&](uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
-    pid_steering_->SetInitialCte(measurement);
-    pid_throttle_->SetInitialCte(measurement);
+    SetInitialCte(measurement);
 
     iterations = 0;
   });
 
-  sim_.OnTelemetry(std::bind(&CarTwiddle::OnTelemetry, this, _1, _2));
+  sim_.OnTelemetry(std::bind(&CarTwiddle::OnTelemetry, this, std::placeholders::_1, std::placeholders::_2));
 
   sim_.Run();
   return GetTotalError();
 }
 
+
 /*----------------------------------------------------------------------------------------*/
 
 SteeringTwiddle::SteeringTwiddle(double init_threshold) :
-      CarTwiddle(init_threshold, &pid_throttle_, &pid_steering_),
-      pid_steering_(p[0], p[1], p[2]),
-      pid_throttle_(-0.192793,-0.0125629,-0.3111750)
+    CarTwiddle(init_threshold),
+    pid_steering_(0, 0, 0),
+    speed_controller_(40.0)
 {
-  pid_throttle_.SetDesiredSpeed(20.0);
-
   p[0] = 0.9;
-  dp[0] = 0.04;
-
   p[1] = 0.09;
+  p[2] = 0;
+  dp[0] = 0.04;
   dp[1] = 0.004;
-
-  p[2]  = 0;
   dp[2] = 1;
 
   calc_after_iterations_ = 800;
   stop_after_iterations_ = 6000;
 }
 
+void SteeringTwiddle::SetControl(ControlInput *control, const TelemetryMessage &measurement) {
+  control->throttle = speed_controller_.GetOutput(measurement);
+  control->steering = pid_steering_.GetOutput(measurement);
+}
+
+void SteeringTwiddle::SetInitialCte(const TelemetryMessage &measurement) {
+  pid_steering_.SetInitialCte(measurement);
+  speed_controller_.SetInitialCte(measurement);
+}
 /*----------------------------------------------------------------------------------------*/
 
 ThrottleTwiddle::ThrottleTwiddle(double init_threshold, double desired_speed) :
-    CarTwiddle(init_threshold, &pid_throttle_, &pid_steering_),
+    CarTwiddle(init_threshold),
     pid_steering_(0.1, 0, 0.003),
     pid_throttle_(p[0], p[1], p[2])
 {
@@ -294,4 +332,15 @@ void ThrottleTwiddle::OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const Telemet
   }
 
   CarTwiddle::OnTelemetry(ws, measurement);
+}
+
+
+void ThrottleTwiddle::SetControl(ControlInput *control, const TelemetryMessage &measurement){
+  control->steering = pid_steering_.GetOutput(measurement);
+  control->throttle = pid_throttle_.GetOutput(measurement);
+}
+
+void ThrottleTwiddle::SetInitialCte(const TelemetryMessage &measurement) {
+  pid_steering_.SetInitialCte(measurement);
+  pid_throttle_.SetInitialCte(measurement);
 }

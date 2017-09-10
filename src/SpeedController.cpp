@@ -39,7 +39,7 @@ SpeedController::SpeedController(double desired_speed) :
   cout << "Throttle params: " << kp << ", " << ki << ", " << kd << endl;
 }
 
-double SpeedController::GetThrottle(const TelemetryMessage &measurement) {
+double SpeedController::GetOutput(const TelemetryMessage &measurement) {
   SetDesiredSpeed(measurement);
   return pid_throttle_->GetOutput(measurement);
 }

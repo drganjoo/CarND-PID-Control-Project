@@ -3,6 +3,7 @@
 
 #include "PID.h"
 #include "Simulator.h"
+#include "SpeedController.h"
 #include <string>
 #include <fstream>
 #include <memory>
@@ -13,7 +14,8 @@ class Twiddle
   explicit Twiddle(double init_threshold);
   virtual ~Twiddle();
 
-  void Start();
+  void StartAll();
+  void StartForIndex(int index);
   void StartCheckBoth();
 
  protected:
@@ -32,7 +34,7 @@ class Twiddle
 
   void OpenLogFiles();
   void WriteResultToLog(double error);
-  bool RunGivesBetterResult(unsigned int i);
+  bool RunGivesBetterResult(unsigned int i, double *error);
 };
 
 //class SteeringThrottleTwiddle : public Twiddle
@@ -52,20 +54,22 @@ class Twiddle
 class CarTwiddle: public Twiddle
 {
  public:
-  explicit CarTwiddle(double init_threshold, PIDThrottle *pid_throttle, PIDSteering *pid_steering);
+  explicit CarTwiddle(double init_threshold) : Twiddle(init_threshold) {
+  }
+
   virtual ~CarTwiddle() = default;
 
-  virtual double GetTotalError() = 0;
-  virtual double Run() override;
-
- protected:
   virtual void OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement);
+  double Run();
 
  protected:
 
+  virtual double GetTotalError() = 0;
+  virtual void SetControl(ControlInput *control, const TelemetryMessage &measurement) = 0;
+  virtual void SetInitialCte(const TelemetryMessage &measurement) = 0;
+
+ protected:
   Simulator sim_;
-  PIDThrottle *pid_throttle_;
-  PIDSteering *pid_steering_;
 
   unsigned int calc_after_iterations_ = 300;
   unsigned int stop_after_iterations_ = 3000;
@@ -73,7 +77,6 @@ class CarTwiddle: public Twiddle
 };
 
 /*----------------------------------------------------------------------------------------*/
-
 
 class SteeringTwiddle : public CarTwiddle
 {
@@ -88,9 +91,13 @@ class SteeringTwiddle : public CarTwiddle
     return pid_steering_.GetAccumError();
   }
 
+  void SetControl(ControlInput *control, const TelemetryMessage &measurement) override;
+  void SetInitialCte(const TelemetryMessage &measurement) override;
+
  protected:
   PIDSteering pid_steering_;
-  PIDThrottle pid_throttle_;
+  //PIDThrottle pid_throttle_;
+  SpeedController speed_controller_;
 };
 
 /*----------------------------------------------------------------------------------------*/
@@ -109,6 +116,8 @@ class ThrottleTwiddle : public CarTwiddle
   }
 
   void OnTelemetry(uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) override;
+  void SetControl(ControlInput *control, const TelemetryMessage &measurement) override;
+  void SetInitialCte(const TelemetryMessage &measurement) override;
 
  protected:
   PIDSteering pid_steering_;
