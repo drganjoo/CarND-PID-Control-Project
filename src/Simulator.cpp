@@ -99,7 +99,8 @@ void Simulator::InitialOnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, siz
 
   auto status = Parse(data, length, &measurement);
   if (status > 0) {
-    if ((fabs(measurement.cte) < 1.0) && (measurement.speed < 1) && settle_down_iterations_++ > 100) {
+//    if ((fabs(measurement.cte) < 1.0) && (measurement.speed < 1) && settle_down_iterations_++ > 100) {
+    if ((fabs(measurement.cte) < 1.0) && (measurement.speed < 1)) {
       measurement.c_dt_secs = 0;
       initialize_fp(ws, measurement);
 
@@ -140,7 +141,7 @@ void Simulator::Run()
   });
 
   hub_.onDisconnection([this](uWS::WebSocket<uWS::SERVER> ws, int code, char *message, size_t length) {
-    //cout << "Disconnected" << endl;
+    cout << "Disconnected" << endl;
   });
 
   int port = 4567;

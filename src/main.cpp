@@ -33,8 +33,9 @@ void ThrottleTest(){
   file_name << "./log_" << chrono::system_clock::now().time_since_epoch().count() << ".csv";
   ofstream log;
   log.open(file_name.str());
+
   if (log.is_open()) {
-    log << "CTE,Speed,Angle,c_throttle,c_dt_secs"
+    log << "CTE,Speed,Angle,c_throttle,c_dt_secs,p_error,i_error,d_error,steering,throttle" << endl;
   }
 
   chrono::system_clock::time_point last_check = chrono::system_clock::now();
@@ -48,6 +49,12 @@ void ThrottleTest(){
     ControlInput control;
 
     iterations++;
+    control.throttle = 0.5;
+    control.steering = 0.0;
+    s.SendControl(ws, control);
+
+    return;
+
 
 //    if (iterations < 1000) {
 //      speed_controller.SetMaxSpeed(100.0);
@@ -69,17 +76,19 @@ void ThrottleTest(){
       last_check = now;
 
       ostringstream oss;
-      oss << setw(6) << iterations << " CTE: "<< measurement.cte << "\tAngle: " << setw(6) << measurement.angle
+      cout << setw(6) << iterations << " CTE: "<< measurement.cte << "\tAngle: " << setw(6) << measurement.angle
            << "\tSpeed: " << measurement.speed << "\tD_Error_: " << pid_steering.GetDError()
            << "\tSTEERING: " << setw(6) << control.steering
            << "\tTHROTTLE: " << control.throttle << endl;
-
-      cout << oss.str();
-
-      if (log.is_open()) {
-        log << oss.str();
-      }
     }
+
+//    if (log.is_open()) {
+//      log << measurement.cte << "," << measurement.angle << "," << measurement.speed << ","
+//          << measurement.c_throttle << "," << measurement.c_dt_secs << ","
+//          << pid_steering.GetPError() << "," << pid_steering.GetIError() << ","
+//          << pid_steering.GetDError() << "," << control.steering << ","
+//          << control.throttle << endl;
+//    }
 
     s.SendControl(ws, control);
 
@@ -90,6 +99,8 @@ void ThrottleTest(){
   });
 
   s.Run();
+
+  cout << "Going out" << endl;
 }
 
 int main()

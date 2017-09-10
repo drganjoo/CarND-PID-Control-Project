@@ -15,26 +15,17 @@ class PID {
   void SetInitialCte(const TelemetryMessage &measurement);
   double GetOutput(const TelemetryMessage &measurement);
 
-  double GetAccumError() const{
-    return accum_error_;
-  }
+  inline double GetAccumError() const{ return accum_error_; }
 
-  double GetDError() const{
-    return d_error_;
-  }
+  inline double GetPError() const{ return p_error_;}
+  inline double GetIError() const{ return i_error_;}
+  inline double GetDError() const{ return d_error_;}
 
-  double GetKp() const{
-    return kp_;
-  }
+  inline double GetKp() const{ return kp_; }
+  inline double GetKi() const{ return ki_; }
+  inline double GetKd() const{ return kd_; }
 
-  double GetKi() const{
-    return ki_;
-  }
-
-  void ResetTotalError() {
-    accum_error_ = 0;
-  }
-
+  inline void ResetTotalError() { accum_error_ = 0; }
 
  protected:
   virtual double GetCte(const TelemetryMessage &measurement) = 0;
