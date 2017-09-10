@@ -22,26 +22,31 @@ struct CarState {
 
 class SpeedController {
  public:
-  SpeedController(double desired_speed);
+  SpeedController(double max_speed);
+  SpeedController(double max_speed, double breaking_speed, double breaking_cte);
 
   double GetOutput(const TelemetryMessage &measurement);
+
   void SetInitialCte(const TelemetryMessage &measurement) {
-    pid_throttle_->SetInitialCte(measurement);
+    pid_throttle_.SetInitialCte(measurement);
+  }
+
+  void SetMaxSpeed(double speed) {
+    max_speed_ = speed;
   }
 
  protected:
-  void SetDesiredSpeed(const TelemetryMessage &measurement);
+  double GetSpeedForAngle(const TelemetryMessage &measurement);
 
  private:
-  const double max_angle_;
+  const double breaking_cte_;
   const double breaking_speed_;
   const double min_good_secs_;
 
   double max_speed_;
 
   CarState state_;
-
-  std::unique_ptr<PIDThrottle> pid_throttle_;
+  PIDThrottle pid_throttle_;
 };
 
 #endif //PID_SPEEDCONTROLLER_H

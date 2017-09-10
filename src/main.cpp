@@ -12,28 +12,27 @@ void RunPid() {
 }
 
 void RunSteeringTwiddle() {
-  SteeringTwiddle t(0.00002);
-  t.StartAll();
+  Twiddle<SteeringTwiddle> t(0.00002, TwiddleParams({-0.07,0,0}, {0.02, 0, 0}));
+  t.Run(2);
 }
 
 void RunThrottleTwiddle() {
-  ThrottleTwiddle t(0.00002, 20.0);
-  t.StartAll();
+  Twiddle<ThrottleTwiddle> t(0.0002, TwiddleParams({0.08,0,0}, {0.02, 0, 0}));
+  t.Run();
 }
 
 void ThrottleTest(){
   Simulator s;
-  //PIDThrottle pid_throttle(20);
-  SpeedController speed_controller(40);
-  PIDSteering pid_steering(-0.07, 0, -50);
+  SpeedController speed_controller(30);
+  PIDSteering pid_steering(-1, 0, 0);
 
   int iterations = 0;
   int stop_after_iterations = 4000;
+//  bool speed_slow = false;
+
+  chrono::system_clock::time_point last_check = chrono::system_clock::now();
 
   s.OnInitialize([&](uWS::WebSocket<uWS::SERVER> &ws, const TelemetryMessage &measurement) {
-    //pid_throttle.Initialize(-0.1, -0.0054, 0, desired_speed - measurement.speed);
-    //pid_throttle.Initialize(-0.1, -0.003, 0, desired_speed - measurement.speed);
-    //pid_throttle.Initialize(-0.08, 0, 0, measurement);
     pid_steering.SetInitialCte(measurement);
     speed_controller.SetInitialCte(measurement);
   });
@@ -43,16 +42,30 @@ void ThrottleTest(){
 
     iterations++;
 
-    //pid_throttle.UpdateError(measurement, true);
-    //control.throttle = pid_throttle.GetOutput();
+//    if (iterations < 1000) {
+//      speed_controller.SetMaxSpeed(100.0);
+//    }
+//    else {
+//      if (!speed_slow) {
+//        speed_slow = true;
+//        cout << "Reducing speed" << endl;
+//      }
+//    }
 
     control.throttle = speed_controller.GetOutput(measurement);
     control.steering  = pid_steering.GetOutput(measurement);
 
-//    cout << iterations << ": Measurement --> cte:" << measurement.cte
-//         << ", speed: " << measurement.speed << ", angle: " << measurement.angle
-//         << " Control ->  steering: " << control.steering
-//         << " throttle: " << control.throttle << endl;
+    auto now = chrono::system_clock::now();
+    auto diff = chrono::duration_cast<chrono::milliseconds>(now - last_check);
+
+    if (diff.count() > 300.0) {
+      last_check = now;
+
+      cout << setw(6) << iterations << " CTE: "<< measurement.cte << "\tAngle: " << measurement.angle
+           << "\tSpeed: " << measurement.speed
+           << "\tSTEERING: " << control.steering
+           << "\tTHROTTLE: " << control.throttle << endl;
+    }
 
     s.SendControl(ws, control);
 
@@ -68,7 +81,7 @@ void ThrottleTest(){
 int main()
 {
   //RunPid();
-  RunSteeringTwiddle();
+  //RunSteeringTwiddle();
   //RunThrottleTwiddle();
-  //ThrottleTest();
+  ThrottleTest();
 }

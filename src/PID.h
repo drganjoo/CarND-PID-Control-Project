@@ -20,15 +20,15 @@ class PID {
   }
 
   double GetDError() const{
-      return d_error_;
+    return d_error_;
   }
 
   double GetKp() const{
-      return kp_;
+    return kp_;
   }
 
   double GetKi() const{
-      return ki_;
+    return ki_;
   }
 
   void ResetTotalError() {
@@ -66,7 +66,8 @@ class PIDSteering : public PID {
 class PIDThrottle : public PID{
  public:
   PIDThrottle(double init_kp, double init_ki, double init_kd) :
-      PID(init_kp, init_ki, init_kd){
+      PID(init_kp, init_ki, init_kd)
+  {
     desired_speed_ = 30;
   }
 
