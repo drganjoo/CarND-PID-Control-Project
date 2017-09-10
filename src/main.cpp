@@ -26,9 +26,10 @@ void Run(){
   PIDSteering pid_steering(-0.195, -0.0079, -0.2);
 
   int iterations = 0;
-  int stop_after_iterations = 50000;
 
 #ifdef CREATE_LOG
+  int stop_after_iterations = 50000;
+
   ostringstream file_name;
   file_name << "./log_" << chrono::system_clock::now().time_since_epoch().count() << ".csv";
   ofstream log;
@@ -67,6 +68,8 @@ void Run(){
            << "\tTHROTTLE: " << control.throttle << endl;
     }
 
+    s.SendControl(ws, control);
+
 #ifdef CREATE_LOG
     if (log.is_open()) {
       log << measurement.cte << "," << measurement.angle << "," << measurement.speed << ","
@@ -75,14 +78,12 @@ void Run(){
           << pid_steering.GetDError() << "," << control.steering << ","
           << control.throttle << endl;
     }
-#endif
-
-    s.SendControl(ws, control);
 
     if (iterations > stop_after_iterations) {
       s.SendReset(ws);
       s.Stop();
     }
+#endif
 
     if (fabs(measurement.cte) <= 0.2)
       pid_steering.ResetIError();
