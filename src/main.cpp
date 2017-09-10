@@ -23,8 +23,8 @@ void RunThrottleTwiddle() {
 
 void ThrottleTest(){
   Simulator s;
-  SpeedController speed_controller(30);
-  PIDSteering pid_steering(-1, 0, 0);
+  SpeedController speed_controller(30, 30, 1.3);
+  PIDSteering pid_steering(-0.09, 0, 0);
 
   int iterations = 0;
   int stop_after_iterations = 4000;
