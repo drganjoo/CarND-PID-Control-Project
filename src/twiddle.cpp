@@ -83,6 +83,7 @@ double ThrottleTwiddle::Run() {
                        sim_.SendControl(ws, control);
 
                        if (iterations_ > stop_after_iterations_) {
+                         error_to_return = pid_throttle_.GetAccumError();
                          sim_.Stop();
                        } else if (iterations_ < calc_after_iterations_)
                          pid_steering_.ResetTotalError();
@@ -92,7 +93,7 @@ double ThrottleTwiddle::Run() {
 
   sim_.Run();
 
-  return pid_throttle_.GetAccumError();
+  return error_to_return;
 }
 
 bool ThrottleTwiddle::IsCarGoingInReverse(const TelemetryMessage &measurement) {

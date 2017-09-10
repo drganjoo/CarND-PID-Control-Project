@@ -24,10 +24,10 @@ void RunThrottleTwiddle() {
 void ThrottleTest(){
   Simulator s;
   SpeedController speed_controller(30, 30, 1.3);
-  PIDSteering pid_steering(-0.09, 0, -100);
+  PIDSteering pid_steering(-0.2, 0, -65);
 
   int iterations = 0;
-  int stop_after_iterations = 4000;
+  int stop_after_iterations = 600000;
 
   ostringstream file_name;
   file_name << "./log_" << chrono::system_clock::now().time_since_epoch().count() << ".csv";
