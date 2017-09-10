@@ -27,6 +27,8 @@ class PID {
 
   inline void ResetTotalError() { accum_error_ = 0; }
 
+  inline void ResetIError() { i_error_ = 0.0; }
+
  protected:
   virtual double GetCte(const TelemetryMessage &measurement) = 0;
 

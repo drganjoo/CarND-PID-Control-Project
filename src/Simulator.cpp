@@ -62,6 +62,7 @@ int Simulator::Parse(char *data, size_t length, TelemetryMessage *measurement) {
 
         auto now = system_clock::now();
         measurement->c_dt_secs = duration_cast<milliseconds>(now - last_call_).count();
+        measurement->c_dt_secs /= 1000.0;
         last_call_ = now;
 
 //        cout << "DT_Secs: " << measurement->c_dt_secs << endl;
