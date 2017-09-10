@@ -28,6 +28,7 @@ void Run(){
   int iterations = 0;
   int stop_after_iterations = 50000;
 
+#ifdef CREATE_LOG
   ostringstream file_name;
   file_name << "./log_" << chrono::system_clock::now().time_since_epoch().count() << ".csv";
   ofstream log;
@@ -36,6 +37,7 @@ void Run(){
   if (log.is_open()) {
     log << "CTE,Angle,Speed,c_throttle,c_dt_secs,p_error,i_error,d_error,steering,throttle" << endl;
   }
+#endif
 
   chrono::system_clock::time_point last_check = chrono::system_clock::now();
 
@@ -65,6 +67,7 @@ void Run(){
            << "\tTHROTTLE: " << control.throttle << endl;
     }
 
+#ifdef CREATE_LOG
     if (log.is_open()) {
       log << measurement.cte << "," << measurement.angle << "," << measurement.speed << ","
           << measurement.c_throttle << "," << measurement.c_dt_secs << ","
@@ -72,6 +75,7 @@ void Run(){
           << pid_steering.GetDError() << "," << control.steering << ","
           << control.throttle << endl;
     }
+#endif
 
     s.SendControl(ws, control);
 

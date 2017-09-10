@@ -10,6 +10,8 @@
 
 # PID
 
+For the project have implemented both Steering and Throttle:
+
 . Steering uses PID  
 . Throttle uses P only (however it has code for slowing down car in case CTE is high but in the end a consistent 30mph was kept, so that part doesn't kick in)
 
@@ -69,7 +71,38 @@ Had to figure out how to reset the simulator and also realized that after reset,
 
 ## PID Logic
 
+**Simulator Class**
+
+Encapsulates the communication with the simulator. Two functions are provided for callbacks:
+
+. OnInitialize (Called only the first time simulator connects)  
+. OnTelemetry (each time a data packet of **telemetry** is sent) 
+
+Values sent by the simulator are encapsulated in a structure:
+
+```
+struct TelemetryMessage {
+  double cte;
+  double speed;
+  double angle;
+  double c_throttle;
+  double c_dt_secs;
+};
+```
+
+Along with the sensor readings, two additional calculated values are also sent to the reset of the program. *c_throttle* holds the last throttle command (used only for debugging) and *c_dt_secs* is the **delta time** passed since the last reading.
+
+*Note: on my computers, dt_secs comes out to be really fast like 6ms on average*
+
 PID.cpp/PID.h
+
+On Initialization, p_error is set to the initial CTE sent by the simulator:
+
+```
+void PID::SetInitialCte(const TelemetryMessage &measurement) {
+  p_error_ = GetCte(measurement);
+}
+```
 
 ```
 double PID::GetOutput(const TelemetryMessage &measurement) {
@@ -93,44 +126,10 @@ double PID::GetOutput(const TelemetryMessage &measurement) {
 
 ```
 
+dt_secs (dt in secs) is calculated by the Simulator class:
 
-
-## Trial Runs
-
-## Fix P Value:
-
-### A very high value (Kp = -1)
-
-Too much oscillation, unusable:
-
-![pid_1_0_0]
-
-### Good Value with Osciallation (Kp = -0.09)
-
-Oscillates, but usable
-
-![pid_1_0_0]
-
-### PD incorporated, a large value (Kd = -1000)
-
-Very jerky movements of the steering wheel:
-
-![pid_0.9_0_1000]
-
-### PD, smaller value (Kd = -100)
-
-Works very well:
-
-![pid_0.9_0_100]
-
-### PD smaller value (Kd = -10)
-
-Works very well:
-
-![pid_0.9_0_10]
-
-### PD, smaller value (Kd = -50)
-
-Works very good:
-
-![pid_0.9_0_50]
+```
+auto now = system_clock::now();
+measurement->c_dt_secs = duration_cast<milliseconds>(now - last_call_).count();
+measurement->c_dt_secs /= 1000.0;
+```
