@@ -53,20 +53,17 @@ Sequence of manual training values for steering:
 ## Shortcomings
 
 1) There are a lot of jerky steering movements
-2) On the bridge the car does steers sharply for a short while and then comes back
+2) On the bridge the car steers sharply for a short while and then comes back. Need to figure out if CTE is bad at that stage or something is wrong with the algorithm.
 3) Had to reset the I_Error, otherwise the car was taking much longer to take the right turn towards the end
 
 ## Lessons Learned
 
 1) Twiddle won't act like magic and it will not figure out perfect parameters, specially if the starting values are kept like in the lesson, P = (0,0,0), DP = (1,1,1)
-2) Unless one knows how to do some sort of PID tuning manually, it is very difficult to understand any algorithmic method of tuning
+2) Unless one knows how to do some sort of PID tuning manually, it is very difficult to understand any algorithmic method of tuning.
 3) Stick to slower but consistent speed and make the PID for steering work. I spent a lot of time doing speed control, thinking that it was the high speed that wasn't letting twiddle work.
+4) After reseting the simulator, for a few iterations, old CTE values are being sent. One has to wait a few iterations for that to get stable.
 
-
-Had to figure out how to reset the simulator and also realized that after reset, the simulator still keeps on sending old data (cte / steering) for a few iterations.
-
-
-## PID Logic
+## Code Explanation
 
 **Simulator Class**
 
