@@ -10,8 +10,8 @@ struct TelemetryMessage {
   double cte;
   double speed;
   double angle;
-  double throttle;
-  double dt_secs;
+  double c_throttle;
+  double c_dt_secs;
 
   friend std::ostream& operator << (std::ostream &os, const TelemetryMessage &m);
 };

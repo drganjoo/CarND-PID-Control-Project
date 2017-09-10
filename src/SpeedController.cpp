@@ -53,7 +53,7 @@ double SpeedController::GetSpeedForAngle(const TelemetryMessage &measurement) {
   }
   else {
     desired_speed = breaking_speed_;
-    state_.steering_ok_for_ms += measurement.dt_secs;
+    state_.steering_ok_for_ms += measurement.c_dt_secs;
 
     if (fabs(angle_to_check) > breaking_cte_) {
       state_.steering_ok_for_ms = 0;

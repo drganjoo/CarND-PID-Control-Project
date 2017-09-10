@@ -26,9 +26,9 @@ void PID::SetInitialCte(const TelemetryMessage &measurement) {
 
 double PID::GetOutput(const TelemetryMessage &measurement) {
   const double cte = GetCte(measurement);
-  double cte_dt = cte * measurement.dt_secs;
+  double cte_dt = cte * measurement.c_dt_secs;
 
-  d_error_ = (cte - p_error_) / measurement.dt_secs;
+  d_error_ = (cte - p_error_) / measurement.c_dt_secs;
   p_error_ = cte;
   i_error_ += cte_dt;
 

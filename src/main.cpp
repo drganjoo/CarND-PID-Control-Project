@@ -24,11 +24,18 @@ void RunThrottleTwiddle() {
 void ThrottleTest(){
   Simulator s;
   SpeedController speed_controller(30, 30, 1.3);
-  PIDSteering pid_steering(-0.09, 0, 0);
+  PIDSteering pid_steering(-0.09, 0, -10000);
 
   int iterations = 0;
   int stop_after_iterations = 4000;
-//  bool speed_slow = false;
+
+  ostringstream file_name;
+  file_name << "./log_" << chrono::system_clock::now().time_since_epoch().count() << ".csv";
+  ofstream log;
+  log.open(file_name.str());
+  if (log.is_open()) {
+    log << "CTE,Speed,Angle,c_throttle,c_dt_secs"
+  }
 
   chrono::system_clock::time_point last_check = chrono::system_clock::now();
 
@@ -61,10 +68,17 @@ void ThrottleTest(){
     if (diff.count() > 300.0) {
       last_check = now;
 
-      cout << setw(6) << iterations << " CTE: "<< measurement.cte << "\tAngle: " << measurement.angle
-           << "\tSpeed: " << measurement.speed
-           << "\tSTEERING: " << control.steering
+      ostringstream oss;
+      oss << setw(6) << iterations << " CTE: "<< measurement.cte << "\tAngle: " << setw(6) << measurement.angle
+           << "\tSpeed: " << measurement.speed << "\tD_Error_: " << pid_steering.GetDError()
+           << "\tSTEERING: " << setw(6) << control.steering
            << "\tTHROTTLE: " << control.throttle << endl;
+
+      cout << oss.str();
+
+      if (log.is_open()) {
+        log << oss.str();
+      }
     }
 
     s.SendControl(ws, control);

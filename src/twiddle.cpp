@@ -101,14 +101,14 @@ bool ThrottleTwiddle::IsCarGoingInReverse(const TelemetryMessage &measurement) {
 
   bool reverse = false;
 
-  if (measurement.throttle < 0) {
+  if (measurement.c_throttle < 0) {
     double speed_derivative = measurement.speed - last_speed;
     last_speed = measurement.speed;
 
     if (speed_derivative >= 0) {
       speed_integral += speed_derivative * 0.1;
 
-      // hmmm is the car going in reverse now since the throttle is -ve
+      // hmmm is the car going in reverse now since the c_throttle is -ve
       // but speed is increasing. Lets see for the next few seconds to make sure this
       // happens
       if (speed_integral >= 5) {

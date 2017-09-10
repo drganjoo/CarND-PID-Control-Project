@@ -51,20 +51,20 @@ int Simulator::Parse(char *data, size_t length, TelemetryMessage *measurement) {
         measurement->speed = stod(jsonObj[1]["speed"].get<string>());
         measurement->angle = stod(jsonObj[1]["steering_angle"].get<string>());
 
-        // simulator is not sending us the throttle back :( it is always 0
+        // simulator is not sending us the c_throttle back :( it is always 0
         // but we need this for checking if the car is going in reverse, hence
         // we use our last_control variable instead of the JSON
-        //measurement->throttle = stod(jsonObj[1]["throttle"].get<string>());
-        measurement->throttle = last_control_.throttle;
+        //measurement->c_throttle = stod(jsonObj[1]["c_throttle"].get<string>());
+        measurement->c_throttle = last_control_.throttle;
 
         //milliseconds now  = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-        //measurement->dt_secs = (now.count() - last_call_.count()) / 1000.0;
+        //measurement->c_dt_secs = (now.count() - last_call_.count()) / 1000.0;
 
         auto now = system_clock::now();
-        measurement->dt_secs = duration_cast<milliseconds>(now - last_call_).count();
+        measurement->c_dt_secs = duration_cast<milliseconds>(now - last_call_).count();
         last_call_ = now;
 
-//        cout << "DT_Secs: " << measurement->dt_secs << endl;
+//        cout << "DT_Secs: " << measurement->c_dt_secs << endl;
 
         if (duration_cast<milliseconds>(now - last_check).count() >= 1000) {
 //          cout << "Frames / Sec: " << frames_per_sec_ << endl;
@@ -100,7 +100,7 @@ void Simulator::InitialOnMessage(uWS::WebSocket<uWS::SERVER> ws, char *data, siz
   auto status = Parse(data, length, &measurement);
   if (status > 0) {
     if ((fabs(measurement.cte) < 1.0) && (measurement.speed < 1) && settle_down_iterations_++ > 100) {
-      measurement.dt_secs = 0;
+      measurement.c_dt_secs = 0;
       initialize_fp(ws, measurement);
 
       last_call_  = system_clock::now();
@@ -206,7 +206,7 @@ void Simulator::SendControl(uWS::WebSocket<uWS::SERVER> &ws, const ControlInput 
 
   json msgJson = {
       {"steering_angle", steering},
-      {"throttle", throttle}
+      {"c_throttle", throttle}
   };
 
   auto msg = "42[\"steer\"," + msgJson.dump() + "]";
