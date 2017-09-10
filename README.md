@@ -133,3 +133,57 @@ auto now = system_clock::now();
 measurement->c_dt_secs = duration_cast<milliseconds>(now - last_call_).count();
 measurement->c_dt_secs /= 1000.0;
 ```
+
+Twiddle Algorithm Implementation:
+
+Since there are two different PID's in the program that needed to be tuned, a base class Twiddle has been written that takes a template parameter for either SteeringTwiddle or ThrottleTwiddle. Difference between the two being that Steering uses a nominal working Throttle PID to have a consistent speed. Throttle on the other hand requires a nominal working PID for steering to get some room to twiddle throttle values.
+
+Both work for different iterations before declaring their errors. Also, the ThrottleTwiddle has code to detect car going in reverse and penalizes the particular P's in that case.
+
+```
+  void RunForIndices(std::vector<int> indices) {
+    OpenLogFiles();
+
+    best_error_ = RunSimulation();
+
+    while (DPHigherThanThreshold(indices)) {
+      double error;
+
+      for (int index : indices){
+        // increment in the positive direction and check results are inferior or better
+        p[index] += dp[index];
+
+        if (RunGivesBetterResult(&error)) {
+          dp[index] *= 1.1;
+        }
+        else {
+          // Go in the opposite direction
+          p[index] -= 2 * dp[index];
+
+          if (RunGivesBetterResult(&error)) {
+            dp[index] *= 1.1;   // next time look for bigger inc / dec.
+          }
+          else {
+            // Both inc / dec give inferior, go back and change dp to a lower value
+            p[index] += dp[index];
+            dp[index] *= 0.9;
+          }
+        }
+      }
+    }
+  }
+```
+
+```
+  bool RunGivesBetterResult(double *error) {
+    *error = RunSimulation();
+
+    if (*error < best_error_) {
+      best_error_ = *error;
+      LogBest();
+      return true;
+    }
+
+    return false;
+  }
+```
