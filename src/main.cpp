@@ -24,7 +24,7 @@ void RunThrottleTwiddle() {
 void ThrottleTest(){
   Simulator s;
   SpeedController speed_controller(30, 30, 1.3);
-  PIDSteering pid_steering(-0.09, 0, -10000);
+  PIDSteering pid_steering(-0.09, 0, -100);
 
   int iterations = 0;
   int stop_after_iterations = 4000;
@@ -49,22 +49,6 @@ void ThrottleTest(){
     ControlInput control;
 
     iterations++;
-    control.throttle = 0.5;
-    control.steering = 0.0;
-    s.SendControl(ws, control);
-
-    return;
-
-
-//    if (iterations < 1000) {
-//      speed_controller.SetMaxSpeed(100.0);
-//    }
-//    else {
-//      if (!speed_slow) {
-//        speed_slow = true;
-//        cout << "Reducing speed" << endl;
-//      }
-//    }
 
     control.throttle = speed_controller.GetOutput(measurement);
     control.steering  = pid_steering.GetOutput(measurement);
@@ -82,13 +66,13 @@ void ThrottleTest(){
            << "\tTHROTTLE: " << control.throttle << endl;
     }
 
-//    if (log.is_open()) {
-//      log << measurement.cte << "," << measurement.angle << "," << measurement.speed << ","
-//          << measurement.c_throttle << "," << measurement.c_dt_secs << ","
-//          << pid_steering.GetPError() << "," << pid_steering.GetIError() << ","
-//          << pid_steering.GetDError() << "," << control.steering << ","
-//          << control.throttle << endl;
-//    }
+    if (log.is_open()) {
+      log << measurement.cte << "," << measurement.angle << "," << measurement.speed << ","
+          << measurement.c_throttle << "," << measurement.c_dt_secs << ","
+          << pid_steering.GetPError() << "," << pid_steering.GetIError() << ","
+          << pid_steering.GetDError() << "," << control.steering << ","
+          << control.throttle << endl;
+    }
 
     s.SendControl(ws, control);
 

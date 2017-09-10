@@ -51,10 +51,10 @@ int Simulator::Parse(char *data, size_t length, TelemetryMessage *measurement) {
         measurement->speed = stod(jsonObj[1]["speed"].get<string>());
         measurement->angle = stod(jsonObj[1]["steering_angle"].get<string>());
 
-        // simulator is not sending us the c_throttle back :( it is always 0
+        // simulator is not sending us the throttle back :( it is always 0
         // but we need this for checking if the car is going in reverse, hence
         // we use our last_control variable instead of the JSON
-        //measurement->c_throttle = stod(jsonObj[1]["c_throttle"].get<string>());
+        //measurement->c_throttle = stod(jsonObj[1]["throttle"].get<string>());
         measurement->c_throttle = last_control_.throttle;
 
         //milliseconds now  = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
@@ -207,7 +207,7 @@ void Simulator::SendControl(uWS::WebSocket<uWS::SERVER> &ws, const ControlInput 
 
   json msgJson = {
       {"steering_angle", steering},
-      {"c_throttle", throttle}
+      {"throttle", throttle}
   };
 
   auto msg = "42[\"steer\"," + msgJson.dump() + "]";

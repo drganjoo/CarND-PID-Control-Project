@@ -226,7 +226,7 @@ class Twiddle
 //
 //	virtual double Run();
 //	virtual std::string GetFileSuffix() {
-//		return "c_throttle";
+//		return "throttle";
 //	}
 //};
 
@@ -259,7 +259,7 @@ class ThrottleTwiddle
 {
  public:
   static std::string GetFilePrefix() {
-    return "c_throttle";
+    return "throttle";
   }
 
   ThrottleTwiddle(double kp, double ki, double kd);
