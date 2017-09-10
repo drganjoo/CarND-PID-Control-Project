@@ -10,10 +10,7 @@
 
 # PID
 
-For the project have implemented both Steering and Throttle:
-
-. Steering uses PID  
-. Throttle uses P only (however it has code for slowing down car in case CTE is high but in the end a consistent 30mph was kept, so that part doesn't kick in)
+For the project have implemented PID for both Steering and Throttle. However, since throttle was getting good results only from the P factor, I and D are kept 0.
 
 ## Tuning
 
