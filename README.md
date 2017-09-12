@@ -10,7 +10,29 @@
 
 # PID
 
-For the project have implemented PID for both Steering and Throttle. However, since throttle was getting good results only from the P factor, I and D are kept 0.
+## Effect of P, I and D on the project
+
+**steering_angle** = kP * CTE + kI * CTE * dt + Kd * (CTE_K - CTE_K-1) / dt
+
+**Propotional Gain**
+
+In order to steer the car back on track, all three parameters had to be in the opposite direction to the cross track error. Propotional gain had the biggest impact on steering. The P value determined how quickly the car responded to the cross track error. A large P value resulted in the car quickly trying to get back but this caused oscillation as it overshot the desired angle.
+
+This video file shows the car using only the P term: ![pid_1_0_0]
+
+**Derivative Gain**
+ 
+In order to stop the oscillation, the steering angle had to be reduced as the cross track error was being reduced. The derivative term helped in this by taking into consideration the change in CTE from one time step to next. The net result of the D term was almost a smooth steering angle
+
+**Integral Gain**
+
+Just using the P and the D component, helped steer the car almost through out the course. However on turnings, where the road was in a curve, just the P and D components alone wasn't proving to be enough to bring the car back onto the center. The I term helped in keeping track of the sum of the errors and consequently increasing in the steer angle.
+
+## Final parameters chosen:
+
+P = -0.195  
+I = -0.0079  
+D = -0.2
 
 ## Tuning
 
