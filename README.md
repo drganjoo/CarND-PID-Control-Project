@@ -74,9 +74,8 @@ Sequence of manual training values for steering:
 
 ## Shortcomings
 
-1) There are a lot of jerky steering movements
+1) Steering is not smooth and sometimes looks like there was a jerk in steering angle.
 2) On the bridge the car steers sharply for a short while and then comes back. Need to figure out if CTE is bad at that stage or something is wrong with the algorithm.
-3) Had to reset the I_Error, otherwise the car was taking much longer to take the right turn towards the end
 
 ## Lessons Learned
 
