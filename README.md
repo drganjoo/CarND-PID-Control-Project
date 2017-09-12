@@ -16,7 +16,7 @@
 
 **Propotional Gain**
 
-In order to steer the car back on track, all three parameters had to be in the opposite direction to the cross track error. Propotional gain had the biggest impact on steering. The P value determined how quickly the car responded to the cross track error. A large P value resulted in the car quickly trying to get back but this caused oscillation as it overshot the desired angle.
+In order to steer the car back on track, all three parameters had to be in the opposite direction to the cross track error. Propotional gain had the biggest impact on steering. The P value determined how quickly the car responded to the cross track error. A large P value resulted in the car quickly trying to get back but that caused the car to overshoot, which in turn caused it to come back and hence a constant oscillation was happening.
 
 This video file shows the car using only the P term: ![pid_1_0_0]
 
