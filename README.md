@@ -26,7 +26,7 @@ In order to stop the oscillation, the steering angle had to be reduced as the cr
 
 **Integral Gain**
 
-Just using the P and the D component, helped steer the car almost through out the course. However on turnings, where the road was in a curve, just the P and D components alone wasn't proving to be enough to bring the car back onto the center. The I term helped in keeping track of the sum of the errors and consequently increasing in the steer angle.
+Just using the P and the D component, helped steer the car almost through out the course. However on turnings, where the road was in a curve, just the P and D components alone wasn't proving to be enough to bring the car back onto the center. The I term helped in keeping track of the sum of the errors and consequently using the I term, resulted in a better steering angle on turnings.
 
 ## Final parameters chosen:
 
