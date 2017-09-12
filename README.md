@@ -22,7 +22,7 @@ This video file shows the car using only the P term: ![pid_1_0_0]
 
 **Derivative Gain**
  
-In order to stop the oscillation, the steering angle had to be reduced as the cross track error was being reduced. The derivative term helped in this by taking into consideration the change in CTE from one time step to next. The net result of the D term was almost a smooth steering angle
+In order to stop the oscillation, the steering angle had to be reduced as the cross track error was being reduced. The derivative term helped in this by taking into consideration the change in CTE from one time step to next. The net result of the D term was almost a smooth steering angle. However, if a large D value was used it resulted in a very jerky movement of the wheel. This video shows the effect of a large D value ![pid_0.9_0_1000].
 
 **Integral Gain**
 
