@@ -12,7 +12,7 @@
 
 ## Effect of P, I and D on the project
 
-**steering_angle** = kP * CTE + kI * CTE * dt + Kd * (CTE_K - CTE_K-1) / dt
+**steering_angle** = (kP * CTE) + (kI * CTE * dt) + (Kd * (CTE_K - CTE_K-1) / dt)
 
 **Propotional Gain**
 
